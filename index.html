@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Subsidiemodel Scholen Tielt</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Basis styling voor de input velden in de tabellen */
+        .table-input {
+            width: 100%;
+            padding: 0.25rem;
+            border: 1px solid #e2e8f0;
+            border-radius: 0.25rem;
+            text-align: right;
+        }
+        .table-input:focus {
+            outline: none;
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 1px #3b82f6;
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 font-sans p-4 md:p-8">
+
+    <div class="max-w-7xl mx-auto space-y-8">
+        
+        <!-- Header -->
+        <header class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+            <h1 class="text-3xl font-bold text-slate-800">Subsidieverdeling Scholen Tielt</h1>
+            <p class="text-slate-500 mt-2">Simulatietool voor de overstap naar enveloppefinanciering op basis van objectieve parameters.</p>
+        </header>
+
+        <!-- Parameters Sectie -->
+        <section class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+            <h2 class="text-xl font-semibold mb-4 border-b pb-2">1. Algemene Parameters & Gewichten</h2>
+            
+            <!-- Uitleg voor het stadsbestuur -->
+            <div class="bg-blue-50 border-l-4 border-blue-500 p-4 mb-6 rounded-r-md text-sm text-blue-900 shadow-sm">
+                <p class="font-bold mb-1">Beleidskeuzes Stadsbestuur</p>
+                <p>Via onderstaande parameters bepaalt u uw beleidsprioriteiten. Door de percentages te wijzigen, kiest u welk criterium zwaarder of lichter doorweegt in de finale verdeling van de pot. U kunt er ook voor kiezen om (al dan niet) met een 'sokkelbedrag' te werken: een gegarandeerd startbedrag voor elke school. Wenst u dit niet? Zet dit bedrag dan simpelweg op € 0.</p>
+            </div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+                <!-- Totale budgetten -->
+                <div class="bg-blue-50 p-4 rounded-lg border border-blue-100 col-span-1 md:col-span-2 lg:col-span-4 flex flex-wrap gap-4 items-center justify-between">
+                    <div>
+                        <label class="block text-sm font-bold text-blue-900">Totaal Budget Stad Tielt (€)</label>
+                        <input type="number" id="param-budget" class="mt-1 block w-48 rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-lg font-bold p-2" value="110000" step="1000">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-bold text-blue-900">Vast Sokkelbedrag per school (€)</label>
+                        <p class="text-xs text-blue-700 mb-1">Wordt vooraf afgetrokken en aan elke school gegeven</p>
+                        <input type="number" id="param-sokkel" class="block w-48 rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2" value="1000" step="100">
+                    </div>
+                </div>
+
+                <!-- Percentages -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Gewicht: Lln-aantal (%)</label>
+                    <p class="text-xs text-gray-500 mb-1 h-8">Basisfinanciering voor algemene werking o.b.v. schoolgrootte.</p>
+                    <input type="number" id="weight-basis" class="weight-input mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2 border" value="35">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Gewicht: Middagtoezicht (%)</label>
+                    <p class="text-xs text-gray-500 mb-1 h-8">Sociale tussenkomst voor scholen met veel etende leerlingen.</p>
+                    <input type="number" id="weight-middag" class="weight-input mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2 border" value="20">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Gewicht: Cultuur (Vervoer) (%)</label>
+                    <p class="text-xs text-gray-500 mb-1 h-8">Subsidieert busritten naar CC. Weegt zwaarder bij grotere afstand.</p>
+                    <input type="number" id="weight-cultuur" class="weight-input mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2 border" value="10">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Gewicht: Zwembad (Vervoer) (%)</label>
+                    <p class="text-xs text-gray-500 mb-1 h-8">Subsidieert vervoer naar zwembad o.b.v. afstand en lln-aantal.</p>
+                    <input type="number" id="weight-zwembad" class="weight-input mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2 border" value="15">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Gewicht: Bib (Vervoer) (%)</label>
+                    <p class="text-xs text-gray-500 mb-1 h-8">Subsidieert vervoer naar de bib o.b.v. afstand en lln-aantal.</p>
+                    <input type="number" id="weight-bib" class="weight-input mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2 border" value="10">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Gewicht: Andere (%)</label>
+                    <p class="text-xs text-gray-500 mb-1 h-8">Vrije ruimte voor specifieke projecten (EHBO, fluo, veiligheid, ...).</p>
+                    <input type="number" id="weight-andere" class="weight-input mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2 border" value="10">
+                </div>
+            </div>
+
+            <!-- Validatie Banner voor percentages -->
+            <div id="weight-warning" class="hidden bg-red-100 border-l-4 border-red-500 text-red-700 p-4 rounded" role="alert">
+                <p class="font-bold">Let op!</p>
+                <p>De som van de percentages is momenteel <span id="weight-total-display"></span>%. Dit moet exact 100% zijn voor een correcte verdeling.</p>
+            </div>
+        </section>
+
+        <!-- Input Tabel Sectie -->
+        <section class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+            <h2 class="text-xl font-semibold mb-4 border-b pb-2">2. Schoolgegevens (Aanpasbaar)</h2>
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-gray-200 text-sm">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th scope="col" class="px-3 py-3 text-left font-medium text-gray-500 uppercase tracking-wider w-1/4">School</th>
+                            <th scope="col" class="px-3 py-3 text-right font-medium text-gray-500 uppercase tracking-wider" title="Totaal aantal leerlingen">Aantal Lln</th>
+                            <th scope="col" class="px-3 py-3 text-right font-medium text-gray-500 uppercase tracking-wider" title="Aantal leerlingen dat op school eet">Lln Middag</th>
+                            <th scope="col" class="px-3 py-3 text-right font-medium text-gray-500 uppercase tracking-wider" title="Afstand enkele rit in km">Afstand Cultuur (km)</th>
+                            <th scope="col" class="px-3 py-3 text-right font-medium text-gray-500 uppercase tracking-wider" title="Afstand enkele rit in km">Afstand Zwembad (km)</th>
+                            <th scope="col" class="px-3 py-3 text-right font-medium text-gray-500 uppercase tracking-wider" title="Afstand enkele rit in km">Afstand Bib (km)</th>
+                            <th scope="col" class="px-3 py-3 text-center font-medium text-gray-500 uppercase tracking-wider">Actie</th>
+                        </tr>
+                    </thead>
+                    <tbody id="school-inputs-body" class="bg-white divide-y divide-gray-200">
+                        <!-- Wordt gevuld via Javascript -->
+                    </tbody>
+                    <tfoot class="bg-gray-50 font-bold">
+                        <tr>
+                            <td class="px-3 py-3 text-left">TOTAAL TIELT</td>
+                            <td id="tot-lln" class="px-3 py-3 text-right">0</td>
+                            <td id="tot-mid" class="px-3 py-3 text-right">0</td>
+                            <td colspan="4"></td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+            <div class="mt-4 flex justify-end">
+                <button onclick="addSchool()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded shadow-sm text-sm font-medium transition-colors">+ School Toevoegen</button>
+            </div>
+        </section>
+
+        <!-- Resultaten Sectie -->
+        <section class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+            <div class="flex justify-between items-end border-b pb-2 mb-4">
+                <h2 class="text-xl font-semibold">3. Berekende Subsidies per School</h2>
+                <div class="text-right">
+                    <span class="text-sm text-gray-500">Te verdelen via formule:</span>
+                    <span id="display-formula-budget" class="text-lg font-bold text-green-600 ml-2">€ 0</span>
+                </div>
+            </div>
+            
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-gray-200 text-sm">
+                    <thead class="bg-slate-800 text-white">
+                        <tr>
+                            <th scope="col" class="px-3 py-3 text-left font-medium uppercase tracking-wider rounded-tl-lg">School</th>
+                            <th scope="col" class="px-3 py-3 text-right font-medium uppercase tracking-wider">Sokkelbedrag</th>
+                            <th scope="col" class="px-3 py-3 text-right font-medium uppercase tracking-wider">Basis (Lln)</th>
+                            <th scope="col" class="px-3 py-3 text-right font-medium uppercase tracking-wider">Middag</th>
+                            <th scope="col" class="px-3 py-3 text-right font-medium uppercase tracking-wider">Cultuur</th>
+                            <th scope="col" class="px-3 py-3 text-right font-medium uppercase tracking-wider">Zwembad</th>
+                            <th scope="col" class="px-3 py-3 text-right font-medium uppercase tracking-wider">Bib</th>
+                            <th scope="col" class="px-3 py-3 text-right font-medium uppercase tracking-wider">Andere</th>
+                            <th scope="col" class="px-3 py-3 text-right font-bold uppercase tracking-wider text-yellow-300 rounded-tr-lg">Totaal (€)</th>
+                        </tr>
+                    </thead>
+                    <tbody id="results-body" class="bg-white divide-y divide-gray-200">
+                        <!-- Wordt gevuld via Javascript -->
+                    </tbody>
+                    <tfoot class="bg-slate-100 font-bold border-t-2 border-slate-300">
+                        <tr>
+                            <td class="px-3 py-4 text-left">EINDTOTAAL</td>
+                            <td id="res-tot-sokkel" class="px-3 py-4 text-right">€ 0</td>
+                            <td id="res-tot-basis" class="px-3 py-4 text-right">€ 0</td>
+                            <td id="res-tot-middag" class="px-3 py-4 text-right">€ 0</td>
+                            <td id="res-tot-cultuur" class="px-3 py-4 text-right">€ 0</td>
+                            <td id="res-tot-zwembad" class="px-3 py-4 text-right">€ 0</td>
+                            <td id="res-tot-bib" class="px-3 py-4 text-right">€ 0</td>
+                            <td id="res-tot-andere" class="px-3 py-4 text-right">€ 0</td>
+                            <td id="res-tot-alles" class="px-3 py-4 text-right text-lg text-green-700">€ 0</td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </section>
+
+        <!-- Uitleg Berekeningen Sectie -->
+        <section class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 mb-8">
+            <h2 class="text-xl font-semibold mb-4 border-b pb-2">4. Uitleg Berekeningen</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 text-sm text-gray-700">
+                <div>
+                    <h3 class="font-bold text-slate-800 mb-1">Te verdelen budget (Formule-budget)</h3>
+                    <p class="mb-4">Het totaal ingegeven budget min alle gegarandeerde sokkelbedragen. Dit is de pot die procentueel over de parameters verdeeld wordt.</p>
+                    
+                    <h3 class="font-bold text-slate-800 mb-1">Sokkelbedrag</h3>
+                    <p class="mb-4">Een vast startbedrag dat elke school vooraf krijgt, ongeacht de grootte of ligging.</p>
+                    
+                    <h3 class="font-bold text-slate-800 mb-1">Basis (Lln) & Andere</h3>
+                    <p class="mb-1">Verdeeld op basis van het relatieve leerlingenaantal.</p>
+                    <p class="mb-4"><code class="bg-slate-100 text-blue-800 px-2 py-1 rounded">Formulebudget × Gewicht % × (Eigen lln / Totaal Tieltse lln)</code></p>
+                    
+                    <h3 class="font-bold text-slate-800 mb-1">Middag</h3>
+                    <p class="mb-1">Verdeeld op basis van het aandeel etende leerlingen.</p>
+                    <p class="mb-4"><code class="bg-slate-100 text-blue-800 px-2 py-1 rounded">Formulebudget × Gewicht % × (Eigen middag-lln / Totaal middag-lln)</code></p>
+                </div>
+                <div>
+                    <h3 class="font-bold text-slate-800 mb-1">Cultuur, Zwembad & Bib (Vervoer)</h3>
+                    <p class="mb-3">Hierbij wordt rekening gehouden met <strong>zowel het aantal leerlingen als de afstand</strong>. Een grote school die ver ligt, heeft meer bussen nodig en weegt dus zwaarder door dan een kleine school die dichtbij ligt.</p>
+                    
+                    <div class="bg-slate-50 p-3 rounded border border-slate-200">
+                        <p class="mb-1 text-xs font-bold text-slate-500 uppercase tracking-wide">Stap 1: Bereken de 'weging' per school</p>
+                        <p class="mb-3"><code class="bg-slate-100 text-blue-800 px-2 py-1 rounded">Weging = Eigen Lln × Eigen Afstand (in km)</code></p>
+                        
+                        <p class="mb-1 text-xs font-bold text-slate-500 uppercase tracking-wide">Stap 2: Bereken de effectieve subsidie</p>
+                        <p><code class="bg-slate-100 text-blue-800 px-2 py-1 rounded">Formulebudget × Gewicht % × (Eigen Weging / Som alle wegingen)</code></p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </div>
+
+    <!-- ========================================== -->
+    <!-- JAVASCRIPT LOGICA & BEREKENINGEN           -->
+    <!-- ========================================== -->
+    <script>
+        // 1. DATA: Initialisatie van de 14 actuele scholen met mock data
+        // Je kan deze data aanpassen of aanvullen. 
+        // L = Leerlingen, M = Middagtoezicht, C/Z/B = Afstanden in km.
+        const scholenData = [
+            { id: 1, naam: "VBS Heilige Familie", L: 250, M: 180, C: 1.2, Z: 2.0, B: 1.0 },
+            { id: 2, naam: "GO! Het Reuzenhuis", L: 180, M: 140, C: 0.5, Z: 1.5, B: 0.8 },
+            { id: 3, naam: "GO! De Dorpsparel", L: 95, M: 70, C: 4.8, Z: 5.5, B: 4.5 },
+            { id: 4, naam: "VBS de Wijzer (Kanegemstraat)", L: 110, M: 85, C: 5.2, Z: 4.8, B: 5.0 },
+            { id: 5, naam: "VBS de Wijzer (Molenweg)", L: 180, M: 140, C: 6.5, Z: 7.0, B: 6.2 },
+            { id: 6, naam: "VBS 't Nieuwland", L: 195, M: 130, C: 1.1, Z: 2.2, B: 1.0 },
+            { id: 7, naam: "VBS Het Spoor", L: 340, M: 210, C: 1.5, Z: 0.5, B: 1.2 },
+            { id: 8, naam: "GO! De Springplank", L: 260, M: 190, C: 1.8, Z: 0.8, B: 1.5 },
+            { id: 9, naam: "GO! De Koorddanser", L: 140, M: 110, C: 4.3, Z: 4.1, B: 4.6 },
+            { id: 10, naam: "VLS Sint-Amandus (Karel v. Manderstr)", L: 220, M: 160, C: 5.1, Z: 4.2, B: 4.9 },
+            { id: 11, naam: "VBS Marialoopschool", L: 290, M: 230, C: 6.9, Z: 6.0, B: 6.7 },
+            { id: 12, naam: "VBS Paanderschool", L: 150, M: 120, C: 7.4, Z: 6.4, B: 7.2 },
+            { id: 13, naam: "VLS Sint-Amandus (Schutterijstraat)", L: 210, M: 155, C: 5.0, Z: 4.1, B: 4.8 },
+            { id: 14, naam: "VBS 't Veld", L: 190, M: 145, C: 6.0, Z: 5.8, B: 6.2 }
+        ];
+
+        // Formatter om getallen mooi als Euro (€) weer te geven
+        const currencyFormatter = new Intl.NumberFormat('nl-BE', { style: 'currency', currency: 'EUR' });
+
+        // 2. FUNCTIES VOOR DE GEBRUIKERSINTERFACE (UI)
+
+        // Verwijder een school
+        function deleteSchool(index) {
+            if(confirm("Weet je zeker dat je deze school wil verwijderen?")) {
+                scholenData.splice(index, 1);
+                renderInputTable();
+                calculateAndRender();
+            }
+        }
+
+        // Voeg een lege school toe
+        function addSchool() {
+            scholenData.push({
+                id: Date.now(),
+                naam: "Nieuwe School",
+                L: 0, M: 0, C: 0, Z: 0, B: 0
+            });
+            renderInputTable();
+            calculateAndRender();
+        }
+
+        // Bouw de input-tabel op
+        function renderInputTable() {
+            const tbody = document.getElementById('school-inputs-body');
+            tbody.innerHTML = '';
+            
+            scholenData.forEach((school, index) => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td class="px-3 py-2"><input type="text" class="table-input w-full font-medium text-slate-900" style="text-align: left;" data-idx="${index}" data-field="naam" value="${school.naam}"></td>
+                    <td class="px-3 py-2"><input type="number" class="table-input w-24 ml-auto" data-idx="${index}" data-field="L" value="${school.L}" min="0"></td>
+                    <td class="px-3 py-2"><input type="number" class="table-input w-24 ml-auto" data-idx="${index}" data-field="M" value="${school.M}" min="0"></td>
+                    <td class="px-3 py-2"><input type="number" class="table-input w-24 ml-auto" data-idx="${index}" data-field="C" value="${school.C}" min="0" step="0.1"></td>
+                    <td class="px-3 py-2"><input type="number" class="table-input w-24 ml-auto" data-idx="${index}" data-field="Z" value="${school.Z}" min="0" step="0.1"></td>
+                    <td class="px-3 py-2"><input type="number" class="table-input w-24 ml-auto" data-idx="${index}" data-field="B" value="${school.B}" min="0" step="0.1"></td>
+                    <td class="px-3 py-2 text-center">
+                        <button onclick="deleteSchool(${index})" class="text-red-400 hover:text-red-600 font-bold px-2 py-1 rounded" title="Verwijder school">✕</button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+
+            // Voeg event listeners toe aan alle nieuwe input velden zodat alles herberekent bij een wijziging
+            document.querySelectorAll('.table-input').forEach(input => {
+                input.addEventListener('input', (e) => {
+                    const idx = e.target.getAttribute('data-idx');
+                    const field = e.target.getAttribute('data-field');
+                    
+                    if (field === 'naam') {
+                        scholenData[idx][field] = e.target.value; // Bewaar tekst voor de naam
+                    } else {
+                        scholenData[idx][field] = parseFloat(e.target.value) || 0; // Bewaar getallen voor de rest
+                    }
+                    
+                    calculateAndRender(); // Herbereken onmiddellijk
+                });
+            });
+        }
+
+        // 3. DE KERN-LOGICA: BEREKENINGEN
+        function calculateAndRender() {
+            // A. Haal alle globale parameters op
+            const TotaalBudget = parseFloat(document.getElementById('param-budget').value) || 0;
+            const SokkelPerSchool = parseFloat(document.getElementById('param-sokkel').value) || 0;
+            
+            const wBasis = parseFloat(document.getElementById('weight-basis').value) || 0;
+            const wMiddag = parseFloat(document.getElementById('weight-middag').value) || 0;
+            const wCultuur = parseFloat(document.getElementById('weight-cultuur').value) || 0;
+            const wZwembad = parseFloat(document.getElementById('weight-zwembad').value) || 0;
+            const wBib = parseFloat(document.getElementById('weight-bib').value) || 0;
+            const wAndere = parseFloat(document.getElementById('weight-andere').value) || 0;
+
+            const totalWeight = wBasis + wMiddag + wCultuur + wZwembad + wBib + wAndere;
+            
+            // Toon waarschuwing als percentages geen 100 zijn
+            const warningEl = document.getElementById('weight-warning');
+            if(totalWeight !== 100) {
+                warningEl.classList.remove('hidden');
+                document.getElementById('weight-total-display').innerText = totalWeight;
+            } else {
+                warningEl.classList.add('hidden');
+            }
+
+            // B. Bereken hoeveel budget er overblijft NA het uitdelen van de sokkelbedragen
+            const AantalScholen = scholenData.length;
+            const TotaalSokkelBudget = SokkelPerSchool * AantalScholen;
+            
+            // Het te verdelen budget via de formule is het Totaal min de gegarandeerde sokkels
+            // We zorgen dat dit niet onder nul zakt (Math.max)
+            const FormuleBudget = Math.max(0, TotaalBudget - TotaalSokkelBudget);
+            document.getElementById('display-formula-budget').innerText = currencyFormatter.format(FormuleBudget);
+
+            // C. Bereken de Totale Sommen van alle scholen (dit zijn de noemers in de breuken)
+            let somLln = 0;
+            let somMiddag = 0;
+            let somCultuurWeging = 0; // Lln * Afstand
+            let somZwembadWeging = 0; // Lln * Afstand
+            let somBibWeging = 0;     // Lln * Afstand
+
+            scholenData.forEach(s => {
+                somLln += s.L;
+                somMiddag += s.M;
+                somCultuurWeging += (s.L * s.C);
+                somZwembadWeging += (s.L * s.Z);
+                somBibWeging += (s.L * s.B);
+            });
+
+            // Update de totalen in de input tabel
+            document.getElementById('tot-lln').innerText = somLln;
+            document.getElementById('tot-mid').innerText = somMiddag;
+
+            // D. Bereken de subsidies per school
+            const resultsBody = document.getElementById('results-body');
+            resultsBody.innerHTML = '';
+
+            // Totalen voor de footer initialiseren
+            let resTotSokkel = 0, resTotBasis = 0, resTotMiddag = 0;
+            let resTotCultuur = 0, resTotZwembad = 0, resTotBib = 0;
+            let resTotAndere = 0, resTotAlles = 0;
+
+            scholenData.forEach(s => {
+                // Bereken elk deelbedrag. 
+                // Formule = (Te Verdelen Budget) * (Percentage van pot) * (Eigen aandeel / Totaal aandeel)
+                // Let op: Deel door nul vermijden (als bv niemand middagtoezicht heeft)
+                
+                const subSokkel = TotaalSokkelBudget > TotaalBudget ? 0 : SokkelPerSchool; 
+                
+                const subBasis = somLln > 0 ? FormuleBudget * (wBasis/100) * (s.L / somLln) : 0;
+                const subMiddag = somMiddag > 0 ? FormuleBudget * (wMiddag/100) * (s.M / somMiddag) : 0;
+                const subCultuur = somCultuurWeging > 0 ? FormuleBudget * (wCultuur/100) * ((s.L * s.C) / somCultuurWeging) : 0;
+                const subZwembad = somZwembadWeging > 0 ? FormuleBudget * (wZwembad/100) * ((s.L * s.Z) / somZwembadWeging) : 0;
+                const subBib = somBibWeging > 0 ? FormuleBudget * (wBib/100) * ((s.L * s.B) / somBibWeging) : 0;
+                const subAndere = somLln > 0 ? FormuleBudget * (wAndere/100) * (s.L / somLln) : 0; // Zelfde verdeelsleutel als basis
+
+                const subTotaal = subSokkel + subBasis + subMiddag + subCultuur + subZwembad + subBib + subAndere;
+
+                // Tellen voor de footer
+                resTotSokkel += subSokkel; resTotBasis += subBasis; resTotMiddag += subMiddag;
+                resTotCultuur += subCultuur; resTotZwembad += subZwembad; resTotBib += subBib;
+                resTotAndere += subAndere; resTotAlles += subTotaal;
+
+                // Voeg de rij toe aan de HTML
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td class="px-3 py-2 whitespace-nowrap text-gray-900 font-medium">${s.naam}</td>
+                    <td class="px-3 py-2 text-right text-slate-500">${currencyFormatter.format(subSokkel)}</td>
+                    <td class="px-3 py-2 text-right">${currencyFormatter.format(subBasis)}</td>
+                    <td class="px-3 py-2 text-right">${currencyFormatter.format(subMiddag)}</td>
+                    <td class="px-3 py-2 text-right">${currencyFormatter.format(subCultuur)}</td>
+                    <td class="px-3 py-2 text-right">${currencyFormatter.format(subZwembad)}</td>
+                    <td class="px-3 py-2 text-right">${currencyFormatter.format(subBib)}</td>
+                    <td class="px-3 py-2 text-right">${currencyFormatter.format(subAndere)}</td>
+                    <td class="px-3 py-2 text-right font-bold text-slate-800 bg-yellow-50">${currencyFormatter.format(subTotaal)}</td>
+                `;
+                resultsBody.appendChild(tr);
+            });
+
+            // Update footer van de resultaten
+            document.getElementById('res-tot-sokkel').innerText = currencyFormatter.format(resTotSokkel);
+            document.getElementById('res-tot-basis').innerText = currencyFormatter.format(resTotBasis);
+            document.getElementById('res-tot-middag').innerText = currencyFormatter.format(resTotMiddag);
+            document.getElementById('res-tot-cultuur').innerText = currencyFormatter.format(resTotCultuur);
+            document.getElementById('res-tot-zwembad').innerText = currencyFormatter.format(resTotZwembad);
+            document.getElementById('res-tot-bib').innerText = currencyFormatter.format(resTotBib);
+            document.getElementById('res-tot-andere').innerText = currencyFormatter.format(resTotAndere);
+            document.getElementById('res-tot-alles').innerText = currencyFormatter.format(resTotAlles);
+        }
+
+        // 4. OPSTARTEN
+        // Koppel de globale parameter inputs aan de herberekening
+        const paramInputs = document.querySelectorAll('#param-budget, #param-sokkel, .weight-input');
+        paramInputs.forEach(input => {
+            input.addEventListener('input', calculateAndRender);
+        });
+
+        // Eerste keer inladen
+        renderInputTable();
+        calculateAndRender();
+
+    </script>
+</body>
+</html>
