@@ -50,7 +50,7 @@
                     </div>
                     <div>
                         <label class="block text-sm font-bold text-blue-900">Vast Sokkelbedrag per school (€)</label>
-                        <p class="text-xs text-blue-700 mb-1">Wordt vooraf afgetrokken en aan elke school gegeven</p>
+                        <p class="text-xs text-blue-700 mb-1">Wordt vooraf afgetrokken en 1x per instellingsnummer toegekend</p>
                         <input type="number" id="param-sokkel" class="block w-48 rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2" value="1000" step="100">
                     </div>
                 </div>
@@ -97,12 +97,19 @@
 
         <!-- Input Tabel Sectie -->
         <section class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
-            <h2 class="text-xl font-semibold mb-4 border-b pb-2">2. Schoolgegevens (Aanpasbaar)</h2>
+            <h2 class="text-xl font-semibold mb-4 border-b pb-2">2. Vestigingsgegevens (Aanpasbaar)</h2>
+            <div class="flex flex-wrap items-center justify-between gap-3 mb-2">
+                <p class="text-sm text-slate-600">Vestigingen met hetzelfde instellingsnummer worden als één school behandeld voor sokkelbedrag en eindresultaat.</p>
+                <button id="reload-data-btn" onclick="loadVestigingenFromEndpoint()" class="bg-slate-700 hover:bg-slate-800 text-white px-3 py-2 rounded shadow-sm text-xs font-medium transition-colors">Data Herladen</button>
+            </div>
+            <p id="data-load-status" class="text-xs text-slate-500 mb-4">Nog geen endpointdata geladen.</p>
             <div class="overflow-x-auto">
                 <table class="min-w-full divide-y divide-gray-200 text-sm">
                     <thead class="bg-gray-50">
                         <tr>
-                            <th scope="col" class="px-3 py-3 text-left font-medium text-gray-500 uppercase tracking-wider w-1/4">School</th>
+                            <th scope="col" class="px-3 py-3 text-left font-medium text-gray-500 uppercase tracking-wider">School</th>
+                            <th scope="col" class="px-3 py-3 text-left font-medium text-gray-500 uppercase tracking-wider">Instellingsnummer</th>
+                            <th scope="col" class="px-3 py-3 text-left font-medium text-gray-500 uppercase tracking-wider">Vestiging / Adres</th>
                             <th scope="col" class="px-3 py-3 text-right font-medium text-gray-500 uppercase tracking-wider" title="Totaal aantal leerlingen">Aantal Lln</th>
                             <th scope="col" class="px-3 py-3 text-right font-medium text-gray-500 uppercase tracking-wider" title="Aantal leerlingen dat op school eet">Lln Middag</th>
                             <th scope="col" class="px-3 py-3 text-right font-medium text-gray-500 uppercase tracking-wider" title="Afstand enkele rit in km">Afstand Cultuur (km)</th>
@@ -116,7 +123,7 @@
                     </tbody>
                     <tfoot class="bg-gray-50 font-bold">
                         <tr>
-                            <td class="px-3 py-3 text-left">TOTAAL TIELT</td>
+                            <td colspan="3" class="px-3 py-3 text-left">TOTAAL TIELT</td>
                             <td id="tot-lln" class="px-3 py-3 text-right">0</td>
                             <td id="tot-mid" class="px-3 py-3 text-right">0</td>
                             <td colspan="4"></td>
@@ -125,7 +132,7 @@
                 </table>
             </div>
             <div class="mt-4 flex justify-end">
-                <button onclick="addSchool()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded shadow-sm text-sm font-medium transition-colors">+ School Toevoegen</button>
+                <button onclick="addVestiging()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded shadow-sm text-sm font-medium transition-colors">+ Vestiging Toevoegen</button>
             </div>
         </section>
 
@@ -183,7 +190,7 @@
                     <p class="mb-4">Het totaal ingegeven budget min alle gegarandeerde sokkelbedragen. Dit is de pot die procentueel over de parameters verdeeld wordt.</p>
                     
                     <h3 class="font-bold text-slate-800 mb-1">Sokkelbedrag</h3>
-                    <p class="mb-4">Een vast startbedrag dat elke school vooraf krijgt, ongeacht de grootte of ligging.</p>
+                    <p class="mb-4">Een vast startbedrag dat elke school vooraf krijgt, ongeacht de grootte of ligging. Scholen met meerdere vestigingen en hetzelfde instellingsnummer krijgen dit bedrag slechts één keer.</p>
                     
                     <h3 class="font-bold text-slate-800 mb-1">Basis (Lln) & Andere</h3>
                     <p class="mb-1">Verdeeld op basis van het relatieve leerlingenaantal.</p>
@@ -214,49 +221,181 @@
     <!-- JAVASCRIPT LOGICA & BEREKENINGEN           -->
     <!-- ========================================== -->
     <script>
-        // 1. DATA: Initialisatie van de 14 actuele scholen met mock data
-        // Je kan deze data aanpassen of aanvullen. 
+        // 1. DATA: bron endpoint + lokale fallback als back-up
         // L = Leerlingen, M = Middagtoezicht, C/Z/B = Afstanden in km.
-        const scholenData = [
-            { id: 1, naam: "VBS Heilige Familie", L: 250, M: 180, C: 1.2, Z: 2.0, B: 1.0 },
-            { id: 2, naam: "GO! Het Reuzenhuis", L: 180, M: 140, C: 0.5, Z: 1.5, B: 0.8 },
-            { id: 3, naam: "GO! De Dorpsparel", L: 95, M: 70, C: 4.8, Z: 5.5, B: 4.5 },
-            { id: 4, naam: "VBS de Wijzer (Kanegemstraat)", L: 110, M: 85, C: 5.2, Z: 4.8, B: 5.0 },
-            { id: 5, naam: "VBS de Wijzer (Molenweg)", L: 180, M: 140, C: 6.5, Z: 7.0, B: 6.2 },
-            { id: 6, naam: "VBS 't Nieuwland", L: 195, M: 130, C: 1.1, Z: 2.2, B: 1.0 },
-            { id: 7, naam: "VBS Het Spoor", L: 340, M: 210, C: 1.5, Z: 0.5, B: 1.2 },
-            { id: 8, naam: "GO! De Springplank", L: 260, M: 190, C: 1.8, Z: 0.8, B: 1.5 },
-            { id: 9, naam: "GO! De Koorddanser", L: 140, M: 110, C: 4.3, Z: 4.1, B: 4.6 },
-            { id: 10, naam: "VLS Sint-Amandus (Karel v. Manderstr)", L: 220, M: 160, C: 5.1, Z: 4.2, B: 4.9 },
-            { id: 11, naam: "VBS Marialoopschool", L: 290, M: 230, C: 6.9, Z: 6.0, B: 6.7 },
-            { id: 12, naam: "VBS Paanderschool", L: 150, M: 120, C: 7.4, Z: 6.4, B: 7.2 },
-            { id: 13, naam: "VLS Sint-Amandus (Schutterijstraat)", L: 210, M: 155, C: 5.0, Z: 4.1, B: 4.8 },
-            { id: 14, naam: "VBS 't Veld", L: 190, M: 145, C: 6.0, Z: 5.8, B: 6.2 }
+        const DATA_ENDPOINT_URL = 'https://script.google.com/macros/s/AKfycbwBLiwvWUS33k7jKMQ0oVwOqoq0Jya2d8V1S8Dc9p6uFlmqKbgYpkOJ-AM9xcAETXCXCQ/exec';
+        const fallbackVestigingenData = [
+            { id: 1, instellingsnummer: "INST-001", schoolNaam: "VBS Heilige Familie", vestigingNaam: "Hoofdvestiging", L: 250, M: 180, C: 1.2, Z: 2.0, B: 1.0 },
+            { id: 2, instellingsnummer: "INST-002", schoolNaam: "GO! Het Reuzenhuis", vestigingNaam: "Hoofdvestiging", L: 180, M: 140, C: 0.5, Z: 1.5, B: 0.8 },
+            { id: 3, instellingsnummer: "INST-003", schoolNaam: "GO! De Dorpsparel", vestigingNaam: "Hoofdvestiging", L: 95, M: 70, C: 4.8, Z: 5.5, B: 4.5 },
+            { id: 4, instellingsnummer: "INST-004", schoolNaam: "VBS de Wijzer", vestigingNaam: "Kanegemstraat", L: 110, M: 85, C: 5.2, Z: 4.8, B: 5.0 },
+            { id: 5, instellingsnummer: "INST-004", schoolNaam: "VBS de Wijzer", vestigingNaam: "Molenweg", L: 180, M: 140, C: 6.5, Z: 7.0, B: 6.2 },
+            { id: 6, instellingsnummer: "INST-005", schoolNaam: "VBS 't Nieuwland", vestigingNaam: "Hoofdvestiging", L: 195, M: 130, C: 1.1, Z: 2.2, B: 1.0 },
+            { id: 7, instellingsnummer: "INST-006", schoolNaam: "VBS Het Spoor", vestigingNaam: "Hoofdvestiging", L: 340, M: 210, C: 1.5, Z: 0.5, B: 1.2 },
+            { id: 8, instellingsnummer: "INST-007", schoolNaam: "GO! De Springplank", vestigingNaam: "Hoofdvestiging", L: 260, M: 190, C: 1.8, Z: 0.8, B: 1.5 },
+            { id: 9, instellingsnummer: "INST-008", schoolNaam: "GO! De Koorddanser", vestigingNaam: "Hoofdvestiging", L: 140, M: 110, C: 4.3, Z: 4.1, B: 4.6 },
+            { id: 10, instellingsnummer: "INST-009", schoolNaam: "VLS Sint-Amandus", vestigingNaam: "Karel v. Manderstraat", L: 220, M: 160, C: 5.1, Z: 4.2, B: 4.9 },
+            { id: 11, instellingsnummer: "INST-010", schoolNaam: "VBS Marialoopschool", vestigingNaam: "Hoofdvestiging", L: 290, M: 230, C: 6.9, Z: 6.0, B: 6.7 },
+            { id: 12, instellingsnummer: "INST-011", schoolNaam: "VBS Paanderschool", vestigingNaam: "Hoofdvestiging", L: 150, M: 120, C: 7.4, Z: 6.4, B: 7.2 },
+            { id: 13, instellingsnummer: "INST-009", schoolNaam: "VLS Sint-Amandus", vestigingNaam: "Schutterijstraat", L: 210, M: 155, C: 5.0, Z: 4.1, B: 4.8 },
+            { id: 14, instellingsnummer: "INST-012", schoolNaam: "VBS 't Veld", vestigingNaam: "Hoofdvestiging", L: 190, M: 145, C: 6.0, Z: 5.8, B: 6.2 },
+            { id: 15, instellingsnummer: "INST-013", schoolNaam: "VKS Sint-Lutgardis", vestigingNaam: "Hoofdvestiging", L: 190, M: 145, C: 6.0, Z: 5.8, B: 6.2 }
         ];
+        const vestigingenData = fallbackVestigingenData.map(vestiging => ({ ...vestiging }));
 
         // Formatter om getallen mooi als Euro (€) weer te geven
         const currencyFormatter = new Intl.NumberFormat('nl-BE', { style: 'currency', currency: 'EUR' });
 
         // 2. FUNCTIES VOOR DE GEBRUIKERSINTERFACE (UI)
+        function toNumber(value) {
+            const number = Number(value);
+            return Number.isFinite(number) ? number : 0;
+        }
 
-        // Verwijder een school
-        function deleteSchool(index) {
-            if(confirm("Weet je zeker dat je deze school wil verwijderen?")) {
-                scholenData.splice(index, 1);
+        function toNonEmptyString(value, fallbackValue) {
+            if (typeof value !== 'string') return fallbackValue;
+            const trimmed = value.trim();
+            return trimmed || fallbackValue;
+        }
+
+        function setDataLoadStatus(message, type = 'info') {
+            const statusEl = document.getElementById('data-load-status');
+            if (!statusEl) return;
+
+            if (type === 'success') {
+                statusEl.className = 'text-xs text-green-700 mb-4';
+            } else if (type === 'error') {
+                statusEl.className = 'text-xs text-red-700 mb-4';
+            } else {
+                statusEl.className = 'text-xs text-slate-500 mb-4';
+            }
+            statusEl.innerText = message;
+        }
+
+        function mapEndpointDataToVestigingen(endpointData) {
+            if (!endpointData || typeof endpointData !== 'object' || Array.isArray(endpointData)) {
+                throw new Error('Onverwacht dataformaat van endpoint');
+            }
+
+            let nextId = Date.now();
+            const mappedVestigingen = [];
+
+            Object.entries(endpointData).forEach(([instellingsnummer, vestigingen]) => {
+                if (!Array.isArray(vestigingen)) return;
+
+                vestigingen.forEach((vestiging, index) => {
+                    const afstanden = vestiging && typeof vestiging === 'object' ? vestiging.afstanden || {} : {};
+
+                    mappedVestigingen.push({
+                        id: nextId++,
+                        instellingsnummer: String(instellingsnummer).trim(),
+                        schoolNaam: toNonEmptyString(vestiging?.schoolnaam, 'Onbekende school'),
+                        vestigingNaam: toNonEmptyString(vestiging?.adres, `Vestiging ${index + 1}`),
+                        L: toNumber(vestiging?.leerlingen),
+                        M: toNumber(vestiging?.schooleters),
+                        C: toNumber(afstanden.cc_min),
+                        Z: toNumber(afstanden.zwemmen_min),
+                        B: toNumber(afstanden.bib_min)
+                    });
+                });
+            });
+
+            return mappedVestigingen;
+        }
+
+        async function loadVestigingenFromEndpoint() {
+            const reloadButton = document.getElementById('reload-data-btn');
+            if (reloadButton) {
+                reloadButton.disabled = true;
+                reloadButton.classList.add('opacity-60', 'cursor-not-allowed');
+            }
+            setDataLoadStatus('Data laden vanaf endpoint...');
+
+            try {
+                const response = await fetch(DATA_ENDPOINT_URL, {
+                    method: 'GET',
+                    headers: { 'Accept': 'application/json' }
+                });
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+
+                const endpointData = await response.json();
+                const mappedVestigingen = mapEndpointDataToVestigingen(endpointData);
+                if (mappedVestigingen.length === 0) {
+                    throw new Error('Endpoint gaf geen vestigingen terug');
+                }
+
+                vestigingenData.splice(0, vestigingenData.length, ...mappedVestigingen);
+                renderInputTable();
+                calculateAndRender();
+
+                const schoolCount = getSchoolAggregaten().length;
+                setDataLoadStatus(`Data geladen: ${mappedVestigingen.length} vestigingen (${schoolCount} scholen).`, 'success');
+            } catch (error) {
+                console.error('Fout bij laden van endpointdata:', error);
+                setDataLoadStatus(`Kon endpointdata niet laden (${error.message}). Lokale voorbeelddata blijft actief.`, 'error');
+            } finally {
+                if (reloadButton) {
+                    reloadButton.disabled = false;
+                    reloadButton.classList.remove('opacity-60', 'cursor-not-allowed');
+                }
+            }
+        }
+
+        // Verwijder een vestiging
+        function deleteVestiging(index) {
+            if(confirm("Weet je zeker dat je deze vestiging wil verwijderen?")) {
+                vestigingenData.splice(index, 1);
                 renderInputTable();
                 calculateAndRender();
             }
         }
 
-        // Voeg een lege school toe
-        function addSchool() {
-            scholenData.push({
+        // Voeg een lege vestiging toe
+        function addVestiging() {
+            vestigingenData.push({
                 id: Date.now(),
-                naam: "Nieuwe School",
+                instellingsnummer: "",
+                schoolNaam: "Nieuwe School",
+                vestigingNaam: "Nieuwe Vestiging",
                 L: 0, M: 0, C: 0, Z: 0, B: 0
             });
             renderInputTable();
             calculateAndRender();
+        }
+
+        function getSchoolAggregaten() {
+            const groepen = new Map();
+
+            vestigingenData.forEach(vestiging => {
+                const instellingsnummer = vestiging.instellingsnummer.trim();
+                const groupKey = instellingsnummer || `fallback-${vestiging.id}`;
+
+                if (!groepen.has(groupKey)) {
+                    groepen.set(groupKey, {
+                        groupKey,
+                        instellingsnummer,
+                        schoolNaam: vestiging.schoolNaam,
+                        vestigingen: [],
+                        totaalL: 0,
+                        totaalM: 0,
+                        cultuurWeging: 0,
+                        zwembadWeging: 0,
+                        bibWeging: 0
+                    });
+                }
+
+                const school = groepen.get(groupKey);
+                school.vestigingen.push(vestiging);
+                school.totaalL += vestiging.L;
+                school.totaalM += vestiging.M;
+                school.cultuurWeging += vestiging.L * vestiging.C;
+                school.zwembadWeging += vestiging.L * vestiging.Z;
+                school.bibWeging += vestiging.L * vestiging.B;
+            });
+
+            return Array.from(groepen.values());
         }
 
         // Bouw de input-tabel op
@@ -264,17 +403,19 @@
             const tbody = document.getElementById('school-inputs-body');
             tbody.innerHTML = '';
             
-            scholenData.forEach((school, index) => {
+            vestigingenData.forEach((vestiging, index) => {
                 const tr = document.createElement('tr');
                 tr.innerHTML = `
-                    <td class="px-3 py-2"><input type="text" class="table-input w-full font-medium text-slate-900" style="text-align: left;" data-idx="${index}" data-field="naam" value="${school.naam}"></td>
-                    <td class="px-3 py-2"><input type="number" class="table-input w-24 ml-auto" data-idx="${index}" data-field="L" value="${school.L}" min="0"></td>
-                    <td class="px-3 py-2"><input type="number" class="table-input w-24 ml-auto" data-idx="${index}" data-field="M" value="${school.M}" min="0"></td>
-                    <td class="px-3 py-2"><input type="number" class="table-input w-24 ml-auto" data-idx="${index}" data-field="C" value="${school.C}" min="0" step="0.1"></td>
-                    <td class="px-3 py-2"><input type="number" class="table-input w-24 ml-auto" data-idx="${index}" data-field="Z" value="${school.Z}" min="0" step="0.1"></td>
-                    <td class="px-3 py-2"><input type="number" class="table-input w-24 ml-auto" data-idx="${index}" data-field="B" value="${school.B}" min="0" step="0.1"></td>
+                    <td class="px-3 py-2"><input type="text" class="table-input w-full font-medium text-slate-900" style="text-align: left;" data-idx="${index}" data-field="schoolNaam" value="${vestiging.schoolNaam}"></td>
+                    <td class="px-3 py-2"><input type="text" class="table-input w-32" style="text-align: left;" data-idx="${index}" data-field="instellingsnummer" value="${vestiging.instellingsnummer}"></td>
+                    <td class="px-3 py-2"><input type="text" class="table-input w-full" style="text-align: left;" data-idx="${index}" data-field="vestigingNaam" value="${vestiging.vestigingNaam}"></td>
+                    <td class="px-3 py-2"><input type="number" class="table-input w-24 ml-auto" data-idx="${index}" data-field="L" value="${vestiging.L}" min="0"></td>
+                    <td class="px-3 py-2"><input type="number" class="table-input w-24 ml-auto" data-idx="${index}" data-field="M" value="${vestiging.M}" min="0"></td>
+                    <td class="px-3 py-2"><input type="number" class="table-input w-24 ml-auto" data-idx="${index}" data-field="C" value="${vestiging.C}" min="0" step="0.1"></td>
+                    <td class="px-3 py-2"><input type="number" class="table-input w-24 ml-auto" data-idx="${index}" data-field="Z" value="${vestiging.Z}" min="0" step="0.1"></td>
+                    <td class="px-3 py-2"><input type="number" class="table-input w-24 ml-auto" data-idx="${index}" data-field="B" value="${vestiging.B}" min="0" step="0.1"></td>
                     <td class="px-3 py-2 text-center">
-                        <button onclick="deleteSchool(${index})" class="text-red-400 hover:text-red-600 font-bold px-2 py-1 rounded" title="Verwijder school">✕</button>
+                        <button onclick="deleteVestiging(${index})" class="text-red-400 hover:text-red-600 font-bold px-2 py-1 rounded" title="Verwijder vestiging">✕</button>
                     </td>
                 `;
                 tbody.appendChild(tr);
@@ -286,10 +427,10 @@
                     const idx = e.target.getAttribute('data-idx');
                     const field = e.target.getAttribute('data-field');
                     
-                    if (field === 'naam') {
-                        scholenData[idx][field] = e.target.value; // Bewaar tekst voor de naam
+                    if (field === 'schoolNaam' || field === 'instellingsnummer' || field === 'vestigingNaam') {
+                        vestigingenData[idx][field] = e.target.value; // Bewaar tekst voor de naamvelden
                     } else {
-                        scholenData[idx][field] = parseFloat(e.target.value) || 0; // Bewaar getallen voor de rest
+                        vestigingenData[idx][field] = parseFloat(e.target.value) || 0; // Bewaar getallen voor de rest
                     }
                     
                     calculateAndRender(); // Herbereken onmiddellijk
@@ -322,8 +463,10 @@
             }
 
             // B. Bereken hoeveel budget er overblijft NA het uitdelen van de sokkelbedragen
-            const AantalScholen = scholenData.length;
+            const schoolAggregaten = getSchoolAggregaten();
+            const AantalScholen = schoolAggregaten.length;
             const TotaalSokkelBudget = SokkelPerSchool * AantalScholen;
+            const kanSokkelUitkeren = TotaalSokkelBudget <= TotaalBudget;
             
             // Het te verdelen budget via de formule is het Totaal min de gegarandeerde sokkels
             // We zorgen dat dit niet onder nul zakt (Math.max)
@@ -337,17 +480,24 @@
             let somZwembadWeging = 0; // Lln * Afstand
             let somBibWeging = 0;     // Lln * Afstand
 
-            scholenData.forEach(s => {
-                somLln += s.L;
-                somMiddag += s.M;
-                somCultuurWeging += (s.L * s.C);
-                somZwembadWeging += (s.L * s.Z);
-                somBibWeging += (s.L * s.B);
+            schoolAggregaten.forEach(school => {
+                somLln += school.totaalL;
+                somMiddag += school.totaalM;
+                somCultuurWeging += school.cultuurWeging;
+                somZwembadWeging += school.zwembadWeging;
+                somBibWeging += school.bibWeging;
+            });
+
+            let totaalVestigingenLln = 0;
+            let totaalVestigingenMiddag = 0;
+            vestigingenData.forEach(vestiging => {
+                totaalVestigingenLln += vestiging.L;
+                totaalVestigingenMiddag += vestiging.M;
             });
 
             // Update de totalen in de input tabel
-            document.getElementById('tot-lln').innerText = somLln;
-            document.getElementById('tot-mid').innerText = somMiddag;
+            document.getElementById('tot-lln').innerText = totaalVestigingenLln;
+            document.getElementById('tot-mid').innerText = totaalVestigingenMiddag;
 
             // D. Bereken de subsidies per school
             const resultsBody = document.getElementById('results-body');
@@ -358,21 +508,23 @@
             let resTotCultuur = 0, resTotZwembad = 0, resTotBib = 0;
             let resTotAndere = 0, resTotAlles = 0;
 
-            scholenData.forEach(s => {
+            schoolAggregaten.forEach(school => {
                 // Bereken elk deelbedrag. 
                 // Formule = (Te Verdelen Budget) * (Percentage van pot) * (Eigen aandeel / Totaal aandeel)
                 // Let op: Deel door nul vermijden (als bv niemand middagtoezicht heeft)
                 
-                const subSokkel = TotaalSokkelBudget > TotaalBudget ? 0 : SokkelPerSchool; 
+                const subSokkel = kanSokkelUitkeren ? SokkelPerSchool : 0;
                 
-                const subBasis = somLln > 0 ? FormuleBudget * (wBasis/100) * (s.L / somLln) : 0;
-                const subMiddag = somMiddag > 0 ? FormuleBudget * (wMiddag/100) * (s.M / somMiddag) : 0;
-                const subCultuur = somCultuurWeging > 0 ? FormuleBudget * (wCultuur/100) * ((s.L * s.C) / somCultuurWeging) : 0;
-                const subZwembad = somZwembadWeging > 0 ? FormuleBudget * (wZwembad/100) * ((s.L * s.Z) / somZwembadWeging) : 0;
-                const subBib = somBibWeging > 0 ? FormuleBudget * (wBib/100) * ((s.L * s.B) / somBibWeging) : 0;
-                const subAndere = somLln > 0 ? FormuleBudget * (wAndere/100) * (s.L / somLln) : 0; // Zelfde verdeelsleutel als basis
+                const subBasis = somLln > 0 ? FormuleBudget * (wBasis/100) * (school.totaalL / somLln) : 0;
+                const subMiddag = somMiddag > 0 ? FormuleBudget * (wMiddag/100) * (school.totaalM / somMiddag) : 0;
+                const subCultuur = somCultuurWeging > 0 ? FormuleBudget * (wCultuur/100) * (school.cultuurWeging / somCultuurWeging) : 0;
+                const subZwembad = somZwembadWeging > 0 ? FormuleBudget * (wZwembad/100) * (school.zwembadWeging / somZwembadWeging) : 0;
+                const subBib = somBibWeging > 0 ? FormuleBudget * (wBib/100) * (school.bibWeging / somBibWeging) : 0;
+                const subAndere = somLln > 0 ? FormuleBudget * (wAndere/100) * (school.totaalL / somLln) : 0; // Zelfde verdeelsleutel als basis
 
                 const subTotaal = subSokkel + subBasis + subMiddag + subCultuur + subZwembad + subBib + subAndere;
+                const instellingsLabel = school.instellingsnummer || 'niet ingevuld';
+                const vestigingenLabel = school.vestigingen.length > 1 ? `<div class="text-xs text-slate-500">${school.vestigingen.length} vestigingen</div>` : '';
 
                 // Tellen voor de footer
                 resTotSokkel += subSokkel; resTotBasis += subBasis; resTotMiddag += subMiddag;
@@ -382,7 +534,11 @@
                 // Voeg de rij toe aan de HTML
                 const tr = document.createElement('tr');
                 tr.innerHTML = `
-                    <td class="px-3 py-2 whitespace-nowrap text-gray-900 font-medium">${s.naam}</td>
+                    <td class="px-3 py-2 text-gray-900">
+                        <div class="font-medium">${school.schoolNaam}</div>
+                        <div class="text-xs text-slate-500">Instellingsnummer: ${instellingsLabel}</div>
+                        ${vestigingenLabel}
+                    </td>
                     <td class="px-3 py-2 text-right text-slate-500">${currencyFormatter.format(subSokkel)}</td>
                     <td class="px-3 py-2 text-right">${currencyFormatter.format(subBasis)}</td>
                     <td class="px-3 py-2 text-right">${currencyFormatter.format(subMiddag)}</td>
@@ -413,9 +569,10 @@
             input.addEventListener('input', calculateAndRender);
         });
 
-        // Eerste keer inladen
+        // Eerste keer inladen met lokale fallback, daarna endpoint ophalen
         renderInputTable();
         calculateAndRender();
+        loadVestigingenFromEndpoint();
 
     </script>
 </body>
