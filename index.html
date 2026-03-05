@@ -100,22 +100,35 @@
             <h2 class="text-xl font-semibold mb-4 border-b pb-2">2. Vestigingsgegevens (Aanpasbaar)</h2>
             <div class="flex flex-wrap items-center justify-between gap-3 mb-2">
                 <p class="text-sm text-slate-600">Vestigingen met hetzelfde instellingsnummer worden als één school behandeld voor sokkelbedrag en eindresultaat.</p>
-                <button id="reload-data-btn" onclick="loadVestigingenFromEndpoint()" class="bg-slate-700 hover:bg-slate-800 text-white px-3 py-2 rounded shadow-sm text-xs font-medium transition-colors">Data Herladen</button>
+                <div class="flex flex-wrap items-center gap-2">
+                    <button id="toggle-edit-btn" onclick="toggleEditMode()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-2 rounded shadow-sm text-xs font-medium transition-colors">✎ Bewerken</button>
+                    <button id="reload-data-btn" onclick="loadVestigingenFromEndpoint()" class="bg-slate-700 hover:bg-slate-800 text-white px-3 py-2 rounded shadow-sm text-xs font-medium transition-colors">Data Herladen</button>
+                </div>
             </div>
+            <p id="table-mode-status" class="text-xs text-slate-500 mb-1">Weergavemodus actief. Klik op het potlood om te bewerken.</p>
             <p id="data-load-status" class="text-xs text-slate-500 mb-4">Nog geen endpointdata geladen.</p>
+            <div class="mb-4 rounded-md border border-amber-300 bg-amber-50 p-3 text-xs text-amber-900">
+                <p class="font-semibold mb-1">Belangrijk voor aanpassingen</p>
+                <p>De gegevens zijn gebaseerd op <a href="https://docs.google.com/spreadsheets/d/1ZHZxAEB_G53TqMWbTN6bMP15dipCbFlbnKMPs0nX9HY/edit?usp=sharing" target="_blank" rel="noopener noreferrer" class="underline font-medium">deze spreadsheet</a>. Manuele aanpassingen in deze tool zijn tijdelijk en worden overschreven bij <strong>Data Herladen</strong> of wanneer je de pagina opnieuw opent.</p>
+            </div>
+            <div id="source-metadata-box" class="mb-4 rounded-md border border-sky-300 bg-sky-50 p-3 text-xs text-sky-900">
+                <p class="font-semibold mb-1">Metadata brondata</p>
+                <p id="source-metadata-opmerkingen"><strong>Opmerkingen:</strong> Nog niet geladen.</p>
+                <p id="source-metadata-generated"><strong>Gegenereerd op:</strong> -</p>
+            </div>
             <div class="overflow-x-auto">
                 <table class="min-w-full divide-y divide-gray-200 text-sm">
                     <thead class="bg-gray-50">
                         <tr>
                             <th scope="col" class="px-3 py-3 text-left font-medium text-gray-500 uppercase tracking-wider">School</th>
-                            <th scope="col" class="px-3 py-3 text-left font-medium text-gray-500 uppercase tracking-wider">Instellingsnummer</th>
+                            <th scope="col" class="px-3 py-3 text-left font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap" title="Instellingsnummer">Inst. nr.</th>
                             <th scope="col" class="px-3 py-3 text-left font-medium text-gray-500 uppercase tracking-wider">Vestiging / Adres</th>
                             <th scope="col" class="px-3 py-3 text-right font-medium text-gray-500 uppercase tracking-wider" title="Totaal aantal leerlingen">Aantal Lln</th>
                             <th scope="col" class="px-3 py-3 text-right font-medium text-gray-500 uppercase tracking-wider" title="Aantal leerlingen dat op school eet">Lln Middag</th>
                             <th scope="col" class="px-3 py-3 text-right font-medium text-gray-500 uppercase tracking-wider" title="Afstand enkele rit in km">Afstand Cultuur (km)</th>
                             <th scope="col" class="px-3 py-3 text-right font-medium text-gray-500 uppercase tracking-wider" title="Afstand enkele rit in km">Afstand Zwembad (km)</th>
                             <th scope="col" class="px-3 py-3 text-right font-medium text-gray-500 uppercase tracking-wider" title="Afstand enkele rit in km">Afstand Bib (km)</th>
-                            <th scope="col" class="px-3 py-3 text-center font-medium text-gray-500 uppercase tracking-wider">Actie</th>
+                            <th id="actie-col-header" scope="col" class="px-3 py-3 text-center font-medium text-gray-500 uppercase tracking-wider">Actie</th>
                         </tr>
                     </thead>
                     <tbody id="school-inputs-body" class="bg-white divide-y divide-gray-200">
@@ -126,12 +139,12 @@
                             <td colspan="3" class="px-3 py-3 text-left">TOTAAL TIELT</td>
                             <td id="tot-lln" class="px-3 py-3 text-right">0</td>
                             <td id="tot-mid" class="px-3 py-3 text-right">0</td>
-                            <td colspan="4"></td>
+                            <td id="totals-fill-cells" colspan="4"></td>
                         </tr>
                     </tfoot>
                 </table>
             </div>
-            <div class="mt-4 flex justify-end">
+            <div id="add-vestiging-wrapper" class="mt-4 flex justify-end hidden">
                 <button onclick="addVestiging()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded shadow-sm text-sm font-medium transition-colors">+ Vestiging Toevoegen</button>
             </div>
         </section>
@@ -242,6 +255,7 @@
             { id: 15, instellingsnummer: "INST-013", schoolNaam: "VKS Sint-Lutgardis", vestigingNaam: "Hoofdvestiging", L: 190, M: 145, C: 6.0, Z: 5.8, B: 6.2 }
         ];
         const vestigingenData = fallbackVestigingenData.map(vestiging => ({ ...vestiging }));
+        let isEditMode = false;
 
         // Formatter om getallen mooi als Euro (€) weer te geven
         const currencyFormatter = new Intl.NumberFormat('nl-BE', { style: 'currency', currency: 'EUR' });
@@ -252,10 +266,67 @@
             return Number.isFinite(number) ? number : 0;
         }
 
+        function escapeHtml(value) {
+            return String(value ?? '')
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
+        function formatCount(value) {
+            return toNumber(value).toLocaleString('nl-BE', { maximumFractionDigits: 0 });
+        }
+
+        function formatDistance(value) {
+            return toNumber(value).toLocaleString('nl-BE', { minimumFractionDigits: 1, maximumFractionDigits: 3 });
+        }
+
         function toNonEmptyString(value, fallbackValue) {
             if (typeof value !== 'string') return fallbackValue;
             const trimmed = value.trim();
             return trimmed || fallbackValue;
+        }
+
+        function updateEditModeUI() {
+            const toggleButton = document.getElementById('toggle-edit-btn');
+            const modeStatusEl = document.getElementById('table-mode-status');
+            const addVestigingWrapper = document.getElementById('add-vestiging-wrapper');
+            const actieHeader = document.getElementById('actie-col-header');
+            const totalsFillCell = document.getElementById('totals-fill-cells');
+
+            if (toggleButton) {
+                toggleButton.classList.remove('bg-emerald-600', 'hover:bg-emerald-700', 'bg-amber-600', 'hover:bg-amber-700');
+                if (isEditMode) {
+                    toggleButton.classList.add('bg-amber-600', 'hover:bg-amber-700');
+                    toggleButton.innerText = 'Bewerkmodus afsluiten';
+                } else {
+                    toggleButton.classList.add('bg-emerald-600', 'hover:bg-emerald-700');
+                    toggleButton.innerText = '✎ Bewerken';
+                }
+            }
+
+            if (modeStatusEl) {
+                modeStatusEl.innerText = isEditMode
+                    ? 'Bewerkmodus actief. Let op: manuele wijzigingen zijn tijdelijk en worden overschreven bij Data Herladen of heropenen van de pagina.'
+                    : 'Weergavemodus actief. Klik op het potlood om te bewerken.';
+            }
+
+            if (addVestigingWrapper) {
+                addVestigingWrapper.classList.toggle('hidden', !isEditMode);
+            }
+            if (actieHeader) {
+                actieHeader.classList.toggle('hidden', !isEditMode);
+            }
+            if (totalsFillCell) {
+                totalsFillCell.colSpan = isEditMode ? 4 : 3;
+            }
+        }
+
+        function toggleEditMode() {
+            isEditMode = !isEditMode;
+            renderInputTable();
         }
 
         function setDataLoadStatus(message, type = 'info') {
@@ -272,15 +343,62 @@
             statusEl.innerText = message;
         }
 
-        function mapEndpointDataToVestigingen(endpointData) {
+        function formatMetadataDate(value) {
+            const parsedDate = new Date(value);
+            if (Number.isNaN(parsedDate.getTime())) {
+                return value || '-';
+            }
+            return parsedDate.toLocaleString('nl-BE', { dateStyle: 'medium', timeStyle: 'short' });
+        }
+
+        function setSourceMetadata(metadata, options = {}) {
+            const opmerkingenEl = document.getElementById('source-metadata-opmerkingen');
+            const generatedEl = document.getElementById('source-metadata-generated');
+            if (!opmerkingenEl || !generatedEl) return;
+
+            const fromEndpoint = options.fromEndpoint === true;
+            if (metadata && typeof metadata === 'object') {
+                const opmerkingen = toNonEmptyString(metadata.opmerkingen, 'Geen opmerkingen meegegeven.');
+                const generated = formatMetadataDate(metadata.gegenereerd_op);
+                opmerkingenEl.innerHTML = `<strong>Opmerkingen:</strong> ${escapeHtml(opmerkingen)}`;
+                generatedEl.innerHTML = `<strong>Gegenereerd op:</strong> ${escapeHtml(generated)}`;
+                return;
+            }
+
+            if (fromEndpoint) {
+                opmerkingenEl.innerHTML = '<strong>Opmerkingen:</strong> Geen metadata meegeleverd door endpoint.';
+                generatedEl.innerHTML = '<strong>Gegenereerd op:</strong> -';
+                return;
+            }
+
+            opmerkingenEl.innerHTML = '<strong>Opmerkingen:</strong> Nog niet geladen.';
+            generatedEl.innerHTML = '<strong>Gegenereerd op:</strong> -';
+        }
+
+        function parseEndpointPayload(endpointData) {
             if (!endpointData || typeof endpointData !== 'object' || Array.isArray(endpointData)) {
                 throw new Error('Onverwacht dataformaat van endpoint');
             }
 
+            if (endpointData.scholen && typeof endpointData.scholen === 'object' && !Array.isArray(endpointData.scholen)) {
+                return {
+                    scholen: endpointData.scholen,
+                    metadata: endpointData.metadata && typeof endpointData.metadata === 'object' ? endpointData.metadata : null
+                };
+            }
+
+            // Backward compatibility: oud formaat zonder top-level metadata/scholen.
+            return {
+                scholen: endpointData,
+                metadata: null
+            };
+        }
+
+        function mapEndpointDataToVestigingen(scholenData) {
             let nextId = Date.now();
             const mappedVestigingen = [];
 
-            Object.entries(endpointData).forEach(([instellingsnummer, vestigingen]) => {
+            Object.entries(scholenData).forEach(([instellingsnummer, vestigingen]) => {
                 if (!Array.isArray(vestigingen)) return;
 
                 vestigingen.forEach((vestiging, index) => {
@@ -303,6 +421,66 @@
             return mappedVestigingen;
         }
 
+        function loadEndpointViaJsonp(url, timeoutMs = 10000) {
+            return new Promise((resolve, reject) => {
+                const callbackName = `__schoolsDataCb_${Date.now()}_${Math.floor(Math.random() * 10000)}`;
+                const separator = url.includes('?') ? '&' : '?';
+                const script = document.createElement('script');
+                let timeoutId = null;
+                let cleanedUp = false;
+
+                function cleanup() {
+                    if (cleanedUp) return;
+                    cleanedUp = true;
+                    if (timeoutId) {
+                        clearTimeout(timeoutId);
+                    }
+                    delete window[callbackName];
+                    if (script.parentNode) {
+                        script.parentNode.removeChild(script);
+                    }
+                }
+
+                window[callbackName] = (data) => {
+                    cleanup();
+                    resolve(data);
+                };
+
+                script.onerror = () => {
+                    cleanup();
+                    reject(new Error('JSONP script kon niet geladen worden'));
+                };
+                script.src = `${url}${separator}callback=${encodeURIComponent(callbackName)}`;
+                document.head.appendChild(script);
+
+                timeoutId = setTimeout(() => {
+                    cleanup();
+                    reject(new Error('JSONP timeout: geen callback ontvangen'));
+                }, timeoutMs);
+            });
+        }
+
+        async function fetchEndpointData() {
+            try {
+                const response = await fetch(DATA_ENDPOINT_URL, {
+                    method: 'GET',
+                    headers: { 'Accept': 'application/json' }
+                });
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+                return await response.json();
+            } catch (error) {
+                // CORS-fouten of netwerkfouten proberen we op te vangen via JSONP.
+                const corsLikely = error instanceof TypeError || /Failed to fetch|NetworkError/i.test(String(error.message || ''));
+                if (!corsLikely) {
+                    throw error;
+                }
+                setDataLoadStatus('Fetch geblokkeerd (mogelijk CORS). JSONP fallback wordt geprobeerd...');
+                return await loadEndpointViaJsonp(DATA_ENDPOINT_URL);
+            }
+        }
+
         async function loadVestigingenFromEndpoint() {
             const reloadButton = document.getElementById('reload-data-btn');
             if (reloadButton) {
@@ -312,23 +490,18 @@
             setDataLoadStatus('Data laden vanaf endpoint...');
 
             try {
-                const response = await fetch(DATA_ENDPOINT_URL, {
-                    method: 'GET',
-                    headers: { 'Accept': 'application/json' }
-                });
-                if (!response.ok) {
-                    throw new Error(`HTTP ${response.status}`);
-                }
-
-                const endpointData = await response.json();
-                const mappedVestigingen = mapEndpointDataToVestigingen(endpointData);
+                const endpointData = await fetchEndpointData();
+                const parsedPayload = parseEndpointPayload(endpointData);
+                const mappedVestigingen = mapEndpointDataToVestigingen(parsedPayload.scholen);
                 if (mappedVestigingen.length === 0) {
                     throw new Error('Endpoint gaf geen vestigingen terug');
                 }
 
                 vestigingenData.splice(0, vestigingenData.length, ...mappedVestigingen);
+                isEditMode = false;
                 renderInputTable();
                 calculateAndRender();
+                setSourceMetadata(parsedPayload.metadata, { fromEndpoint: true });
 
                 const schoolCount = getSchoolAggregaten().length;
                 setDataLoadStatus(`Data geladen: ${mappedVestigingen.length} vestigingen (${schoolCount} scholen).`, 'success');
@@ -402,24 +575,50 @@
         function renderInputTable() {
             const tbody = document.getElementById('school-inputs-body');
             tbody.innerHTML = '';
+            updateEditModeUI();
             
             vestigingenData.forEach((vestiging, index) => {
                 const tr = document.createElement('tr');
-                tr.innerHTML = `
-                    <td class="px-3 py-2"><input type="text" class="table-input w-full font-medium text-slate-900" style="text-align: left;" data-idx="${index}" data-field="schoolNaam" value="${vestiging.schoolNaam}"></td>
-                    <td class="px-3 py-2"><input type="text" class="table-input w-32" style="text-align: left;" data-idx="${index}" data-field="instellingsnummer" value="${vestiging.instellingsnummer}"></td>
-                    <td class="px-3 py-2"><input type="text" class="table-input w-full" style="text-align: left;" data-idx="${index}" data-field="vestigingNaam" value="${vestiging.vestigingNaam}"></td>
-                    <td class="px-3 py-2"><input type="number" class="table-input w-24 ml-auto" data-idx="${index}" data-field="L" value="${vestiging.L}" min="0"></td>
-                    <td class="px-3 py-2"><input type="number" class="table-input w-24 ml-auto" data-idx="${index}" data-field="M" value="${vestiging.M}" min="0"></td>
-                    <td class="px-3 py-2"><input type="number" class="table-input w-24 ml-auto" data-idx="${index}" data-field="C" value="${vestiging.C}" min="0" step="0.1"></td>
-                    <td class="px-3 py-2"><input type="number" class="table-input w-24 ml-auto" data-idx="${index}" data-field="Z" value="${vestiging.Z}" min="0" step="0.1"></td>
-                    <td class="px-3 py-2"><input type="number" class="table-input w-24 ml-auto" data-idx="${index}" data-field="B" value="${vestiging.B}" min="0" step="0.1"></td>
-                    <td class="px-3 py-2 text-center">
-                        <button onclick="deleteVestiging(${index})" class="text-red-400 hover:text-red-600 font-bold px-2 py-1 rounded" title="Verwijder vestiging">✕</button>
-                    </td>
-                `;
+                if (isEditMode) {
+                    tr.innerHTML = `
+                        <td class="px-3 py-2"><input type="text" class="table-input w-52 font-medium text-slate-900" style="text-align: left;" data-idx="${index}" data-field="schoolNaam" value="${escapeHtml(vestiging.schoolNaam)}"></td>
+                        <td class="px-3 py-2"><input type="text" class="table-input w-28" style="text-align: left;" data-idx="${index}" data-field="instellingsnummer" value="${escapeHtml(vestiging.instellingsnummer)}"></td>
+                        <td class="px-3 py-2"><input type="text" class="table-input w-64" style="text-align: left;" data-idx="${index}" data-field="vestigingNaam" value="${escapeHtml(vestiging.vestigingNaam)}"></td>
+                        <td class="px-3 py-2"><input type="number" class="table-input w-20 ml-auto" data-idx="${index}" data-field="L" value="${toNumber(vestiging.L)}" min="0"></td>
+                        <td class="px-3 py-2"><input type="number" class="table-input w-20 ml-auto" data-idx="${index}" data-field="M" value="${toNumber(vestiging.M)}" min="0"></td>
+                        <td class="px-3 py-2"><input type="number" class="table-input w-20 ml-auto" data-idx="${index}" data-field="C" value="${toNumber(vestiging.C)}" min="0" step="0.1"></td>
+                        <td class="px-3 py-2"><input type="number" class="table-input w-20 ml-auto" data-idx="${index}" data-field="Z" value="${toNumber(vestiging.Z)}" min="0" step="0.1"></td>
+                        <td class="px-3 py-2"><input type="number" class="table-input w-20 ml-auto" data-idx="${index}" data-field="B" value="${toNumber(vestiging.B)}" min="0" step="0.1"></td>
+                        <td class="px-3 py-2 text-center">
+                            <button onclick="deleteVestiging(${index})" class="text-red-400 hover:text-red-600 font-bold px-2 py-1 rounded" title="Verwijder vestiging">✕</button>
+                        </td>
+                    `;
+                } else {
+                    const schoolNaam = escapeHtml(vestiging.schoolNaam);
+                    const instellingsnummer = escapeHtml(vestiging.instellingsnummer || '-');
+                    const vestigingNaam = escapeHtml(vestiging.vestigingNaam);
+
+                    tr.innerHTML = `
+                        <td class="px-3 py-2">
+                            <div class="max-w-56 truncate font-medium text-slate-900" title="${schoolNaam}">${schoolNaam}</div>
+                        </td>
+                        <td class="px-3 py-2 whitespace-nowrap text-slate-700">${instellingsnummer}</td>
+                        <td class="px-3 py-2">
+                            <div class="max-w-64 truncate text-slate-700" title="${vestigingNaam}">${vestigingNaam}</div>
+                        </td>
+                        <td class="px-3 py-2 text-right whitespace-nowrap">${formatCount(vestiging.L)}</td>
+                        <td class="px-3 py-2 text-right whitespace-nowrap">${formatCount(vestiging.M)}</td>
+                        <td class="px-3 py-2 text-right whitespace-nowrap">${formatDistance(vestiging.C)}</td>
+                        <td class="px-3 py-2 text-right whitespace-nowrap">${formatDistance(vestiging.Z)}</td>
+                        <td class="px-3 py-2 text-right whitespace-nowrap">${formatDistance(vestiging.B)}</td>
+                    `;
+                }
                 tbody.appendChild(tr);
             });
+
+            if (!isEditMode) {
+                return;
+            }
 
             // Voeg event listeners toe aan alle nieuwe input velden zodat alles herberekent bij een wijziging
             document.querySelectorAll('.table-input').forEach(input => {
@@ -572,6 +771,7 @@
         // Eerste keer inladen met lokale fallback, daarna endpoint ophalen
         renderInputTable();
         calculateAndRender();
+        setSourceMetadata(null);
         loadVestigingenFromEndpoint();
 
     </script>
