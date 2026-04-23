@@ -291,8 +291,9 @@
             <div class="flex justify-between items-end border-b pb-2 mb-4">
                 <h2 class="text-xl font-semibold">3. Berekende Subsidies per School</h2>
                 <div class="text-right">
-                    <span class="text-sm text-gray-500">Te verdelen via formule:</span>
+                    <span class="text-sm text-gray-500">Te verdelen via formule na sokkels:</span>
                     <span id="display-formula-budget" class="text-lg font-bold text-green-600 ml-2">€ 0</span>
+                    <p id="display-formula-budget-detail" class="mt-1 max-w-sm text-xs leading-5 text-gray-500">Totaalbudget - alle sokkels = formulebudget.</p>
                 </div>
             </div>
             
@@ -336,11 +337,12 @@
             <h2 class="text-xl font-semibold mb-4 border-b pb-2">4. Uitleg Berekeningen</h2>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6 text-sm text-gray-700">
                 <div>
-                    <h3 class="font-bold text-slate-800 mb-1">Te verdelen budget (Formule-budget)</h3>
-                    <p class="mb-4">Het totaal ingegeven budget min alle gegarandeerde sokkelbedragen. Dit is de pot die procentueel over de parameters verdeeld wordt.</p>
+                    <h3 class="font-bold text-slate-800 mb-1">Formulebudget: wat blijft over na de sokkel?</h3>
+                    <p class="mb-2">Het formulebudget is niet hetzelfde als het totaalbudget. Eerst krijgt elke school een vast sokkelbedrag. Pas wat daarna overblijft, wordt met de percentages verdeeld.</p>
+                    <p class="mb-4"><code class="bg-slate-100 text-blue-800 px-2 py-1 rounded">Formulebudget = Totaal budget - (Aantal scholen × Sokkelbedrag per school)</code></p>
                     
                     <h3 class="font-bold text-slate-800 mb-1">Sokkelbedrag</h3>
-                    <p class="mb-4">Een vast startbedrag dat elke school vooraf krijgt, ongeacht de grootte of ligging. Scholen met meerdere vestigingen en hetzelfde instellingsnummer krijgen dit bedrag slechts één keer.</p>
+                    <p class="mb-4">Een vast startbedrag dat elke school vooraf krijgt, ongeacht de grootte of ligging. Scholen met meerdere vestigingen en hetzelfde instellingsnummer krijgen dit bedrag slechts één keer. Daardoor verlaagt een hogere sokkel de pot die nog via de gewichten verdeeld wordt.</p>
                     
                     <h3 class="font-bold text-slate-800 mb-1">Basis (Lln) & Andere</h3>
                     <p class="mb-1">Verdeeld op basis van het relatieve leerlingenaantal.</p>
@@ -474,6 +476,36 @@
             return `${formatDecimal((toNumber(numerator) / toNumber(denominator)) * 100, 2)}%`;
         }
 
+        function createFormulaBudgetFormula(options) {
+            const totaalBudget = toNumber(options.totaalBudget);
+            const aantalScholen = toNumber(options.aantalScholen);
+            const sokkelPerSchool = toNumber(options.sokkelPerSchool);
+            const totaalSokkelBudget = toNumber(options.totaalSokkelBudget);
+            const formulaBudget = toNumber(options.formulaBudget);
+            const baseFormula = `${currencyFormatter.format(totaalBudget)} - (${formatCount(aantalScholen)} scholen × ${currencyFormatter.format(sokkelPerSchool)})`;
+
+            if (totaalSokkelBudget > totaalBudget) {
+                return `${baseFormula} is lager dan € 0, dus formulebudget = ${currencyFormatter.format(formulaBudget)}`;
+            }
+
+            return `${baseFormula} = ${currencyFormatter.format(formulaBudget)}`;
+        }
+
+        function createFormulaBudgetSteps(options) {
+            const aantalScholen = toNumber(options.aantalScholen);
+            const sokkelPerSchool = toNumber(options.sokkelPerSchool);
+            const totaalSokkelBudget = toNumber(options.totaalSokkelBudget);
+            const formulaBudget = toNumber(options.formulaBudget);
+
+            return [
+                { label: 'Totaal budget', value: currencyFormatter.format(options.totaalBudget) },
+                { label: 'Aantal scholen met sokkel', value: formatCount(aantalScholen) },
+                { label: 'Sokkel per school', value: currencyFormatter.format(sokkelPerSchool) },
+                { label: 'Alle sokkels samen', value: `${formatCount(aantalScholen)} × ${currencyFormatter.format(sokkelPerSchool)} = ${currencyFormatter.format(totaalSokkelBudget)}` },
+                { label: 'Formulebudget na sokkels', value: currencyFormatter.format(formulaBudget) }
+            ];
+        }
+
         function makeAmountButton(calculationKey, amount, extraClass = '') {
             return `<button type="button" class="result-amount-button ${extraClass}" data-calculation-key="${escapeHtml(calculationKey)}" title="Toon berekening">${currencyFormatter.format(amount)}</button>`;
         }
@@ -551,9 +583,10 @@
             const unit = options.unit || '';
             const ownValue = unit ? `${formatDecimal(own, 2)} ${unit}` : formatDecimal(own, 2);
             const totalValue = unit ? `${formatDecimal(total, 2)} ${unit}` : formatDecimal(total, 2);
+            const formulaBudgetFormula = createFormulaBudgetFormula(options);
             const formula = total > 0
-                ? `${currencyFormatter.format(formulaBudget)} × ${formatWeight(weight)} × (${formatDecimal(own, 2)} / ${formatDecimal(total, 2)}) = ${currencyFormatter.format(options.amount)}`
-                : `${currencyFormatter.format(formulaBudget)} × ${formatWeight(weight)} × 0 = ${currencyFormatter.format(options.amount)}`;
+                ? `Formulebudget = ${formulaBudgetFormula}. Subsidie = ${currencyFormatter.format(formulaBudget)} × ${formatWeight(weight)} × (${formatDecimal(own, 2)} / ${formatDecimal(total, 2)}) = ${currencyFormatter.format(options.amount)}`
+                : `Formulebudget = ${formulaBudgetFormula}. Subsidie = ${currencyFormatter.format(formulaBudget)} × ${formatWeight(weight)} × 0 = ${currencyFormatter.format(options.amount)}`;
 
             return {
                 title: options.title,
@@ -562,7 +595,7 @@
                 explanation: options.explanation,
                 formula,
                 steps: [
-                    { label: 'Formulebudget', value: currencyFormatter.format(formulaBudget) },
+                    ...createFormulaBudgetSteps(options),
                     { label: `Gewicht ${options.title}`, value: formatWeight(weight) },
                     { label: `Pot voor ${options.title}`, value: currencyFormatter.format(rubriekBudget) },
                     { label: ownLabel, value: ownValue },
@@ -570,7 +603,9 @@
                     { label: 'Aandeel van deze school', value: formatShare(own, total) },
                     { label: 'Resultaat', value: currencyFormatter.format(options.amount) }
                 ],
-                note: total > 0 ? '' : `Er is geen totaal voor ${totalLabel.toLowerCase()}. Daarom wordt deze rubriek op € 0 gezet.`
+                note: total > 0
+                    ? 'De sokkelbedragen zijn hier al afgehouden. Dit deelbedrag komt alleen uit het formulebudget.'
+                    : `Er is geen totaal voor ${totalLabel.toLowerCase()}. Daarom wordt deze rubriek op € 0 gezet.`
             };
         }
 
@@ -585,17 +620,20 @@
                 amount: options.amount,
                 explanation,
                 formula: options.kanSokkelUitkeren
-                    ? `${currencyFormatter.format(options.sokkelPerSchool)} = ${currencyFormatter.format(options.amount)}`
-                    : `${currencyFormatter.format(options.sokkelPerSchool)} wordt niet toegekend = ${currencyFormatter.format(options.amount)}`,
+                    ? `Sokkel deze school = ${currencyFormatter.format(options.sokkelPerSchool)}. Daarna blijft over voor de gewichten: ${createFormulaBudgetFormula(options)}`
+                    : `${currencyFormatter.format(options.sokkelPerSchool)} wordt niet toegekend. ${createFormulaBudgetFormula(options)}`,
                 steps: [
                     { label: 'Totaal budget', value: currencyFormatter.format(options.totaalBudget) },
                     { label: 'Aantal scholen', value: formatCount(options.aantalScholen) },
                     { label: 'Sokkel per school', value: currencyFormatter.format(options.sokkelPerSchool) },
                     { label: 'Nodig voor alle sokkels', value: currencyFormatter.format(options.totaalSokkelBudget) },
+                    { label: 'Formulebudget na sokkels', value: currencyFormatter.format(options.formulaBudget) },
                     { label: 'Past binnen budget', value: options.kanSokkelUitkeren ? 'Ja' : 'Nee' },
                     { label: 'Resultaat', value: currencyFormatter.format(options.amount) }
                 ],
-                note: ''
+                note: options.kanSokkelUitkeren
+                    ? 'De sokkel is een aparte eerste schijf. De percentages worden daarna enkel toegepast op het formulebudget.'
+                    : 'Omdat alle sokkels samen hoger zijn dan het budget, worden de sokkels in dit model niet uitgekeerd.'
             };
         }
 
@@ -617,6 +655,7 @@
             const rubriekBudget = formulaBudget * (weight / 100);
             const denominator = toNumber(options.denominator);
             const denominatorLabel = options.denominatorLabel || 'Totaal aandeel';
+            const formulaBudgetFormula = createFormulaBudgetFormula(options);
 
             return {
                 title: options.title,
@@ -624,16 +663,18 @@
                 amount: options.amount,
                 explanation: options.explanation,
                 formula: denominator > 0
-                    ? `${currencyFormatter.format(formulaBudget)} × ${formatWeight(weight)} = ${currencyFormatter.format(rubriekBudget)}`
-                    : `${currencyFormatter.format(formulaBudget)} × ${formatWeight(weight)} × 0 = ${currencyFormatter.format(options.amount)}`,
+                    ? `Formulebudget = ${formulaBudgetFormula}. Kolompot = ${currencyFormatter.format(formulaBudget)} × ${formatWeight(weight)} = ${currencyFormatter.format(rubriekBudget)}`
+                    : `Formulebudget = ${formulaBudgetFormula}. Kolompot = ${currencyFormatter.format(formulaBudget)} × ${formatWeight(weight)} × 0 = ${currencyFormatter.format(options.amount)}`,
                 steps: [
-                    { label: 'Formulebudget', value: currencyFormatter.format(formulaBudget) },
+                    ...createFormulaBudgetSteps(options),
                     { label: `Gewicht ${options.title}`, value: formatWeight(weight) },
                     { label: denominatorLabel, value: formatDecimal(denominator, 2) },
                     { label: `Pot voor ${options.title}`, value: currencyFormatter.format(rubriekBudget) },
                     { label: 'Uitgekeerd in deze kolom', value: currencyFormatter.format(options.amount) }
                 ],
-                note: denominator > 0 ? '' : `Er is geen totaal voor ${denominatorLabel.toLowerCase()}. Daarom wordt deze kolom op € 0 gezet.`
+                note: denominator > 0
+                    ? 'De sokkelbedragen zijn hier al afgehouden. Deze kolompot komt alleen uit het formulebudget.'
+                    : `Er is geen totaal voor ${denominatorLabel.toLowerCase()}. Daarom wordt deze kolom op € 0 gezet.`
             };
         }
 
@@ -1031,6 +1072,18 @@
             // We zorgen dat dit niet onder nul zakt (Math.max)
             const FormuleBudget = Math.max(0, TotaalBudget - TotaalSokkelBudget);
             document.getElementById('display-formula-budget').innerText = currencyFormatter.format(FormuleBudget);
+            const budgetContext = {
+                totaalBudget: TotaalBudget,
+                sokkelPerSchool: SokkelPerSchool,
+                aantalScholen: AantalScholen,
+                totaalSokkelBudget: TotaalSokkelBudget,
+                formulaBudget: FormuleBudget,
+                kanSokkelUitkeren
+            };
+            const formulaBudgetDetailEl = document.getElementById('display-formula-budget-detail');
+            if (formulaBudgetDetailEl) {
+                formulaBudgetDetailEl.innerText = `Formulebudget = ${createFormulaBudgetFormula(budgetContext)}.`;
+            }
 
             // C. Bereken de Totale Sommen van alle scholen (dit zijn de noemers in de breuken)
             let somLln = 0;
@@ -1112,19 +1165,15 @@
                 };
 
                 nextCalculationDetails[detailKeys.sokkel] = createSokkelCalculationDetail({
+                    ...budgetContext,
                     school: detailSchoolLabel,
-                    amount: subSokkel,
-                    totaalBudget: TotaalBudget,
-                    sokkelPerSchool: SokkelPerSchool,
-                    aantalScholen: AantalScholen,
-                    totaalSokkelBudget: TotaalSokkelBudget,
-                    kanSokkelUitkeren
+                    amount: subSokkel
                 });
                 nextCalculationDetails[detailKeys.basis] = createShareCalculationDetail({
+                    ...budgetContext,
                     title: 'Basis (Lln)',
                     school: detailSchoolLabel,
                     amount: subBasis,
-                    formulaBudget: FormuleBudget,
                     weight: wBasis,
                     own: school.totaalL,
                     total: somLln,
@@ -1133,10 +1182,10 @@
                     explanation: 'Voor basisfinanciering telt het leerlingenaantal. Eerst wordt de basispot bepaald via het gewicht. Daarna krijgt deze school haar aandeel in die pot volgens haar aandeel in alle leerlingen.'
                 });
                 nextCalculationDetails[detailKeys.middag] = createShareCalculationDetail({
+                    ...budgetContext,
                     title: 'Middag',
                     school: detailSchoolLabel,
                     amount: subMiddag,
-                    formulaBudget: FormuleBudget,
                     weight: wMiddag,
                     own: school.totaalM,
                     total: somMiddag,
@@ -1145,10 +1194,10 @@
                     explanation: 'Voor middagtoezicht wordt gekeken naar het aantal leerlingen dat op school eet. Een school met een groter aandeel etende leerlingen krijgt een groter aandeel van deze pot.'
                 });
                 nextCalculationDetails[detailKeys.zwembadbezoek] = createShareCalculationDetail({
+                    ...budgetContext,
                     title: 'Zwembadbezoek',
                     school: detailSchoolLabel,
                     amount: subZwembadBezoek,
-                    formulaBudget: FormuleBudget,
                     weight: wZwembadBezoek,
                     own: school.totaalZwembadBezoekers,
                     total: somZwembadBezoekers,
@@ -1157,10 +1206,10 @@
                     explanation: 'Voor zwembadbezoek telt het cumulatieve aantal bezoeken. De school krijgt dus niet alleen iets omdat ze gaat zwemmen, maar volgens hoeveel bezoeken zij vertegenwoordigt in het totaal.'
                 });
                 nextCalculationDetails[detailKeys.sporthalbezoek] = createShareCalculationDetail({
+                    ...budgetContext,
                     title: 'Sporthalbezoek',
                     school: detailSchoolLabel,
                     amount: subSporthalBezoek,
-                    formulaBudget: FormuleBudget,
                     weight: wSporthalBezoek,
                     own: school.totaalSportinfrastructuurBezoekers,
                     total: somSporthalBezoekers,
@@ -1169,10 +1218,10 @@
                     explanation: 'Voor sporthalbezoek telt het cumulatieve aantal bezoeken aan de sportinfrastructuur. De school krijgt haar aandeel van deze pot volgens haar aandeel in alle sporthalbezoeken.'
                 });
                 nextCalculationDetails[detailKeys.afstanden] = createShareCalculationDetail({
+                    ...budgetContext,
                     title: 'Afstanden',
                     school: detailSchoolLabel,
                     amount: subAfstanden,
-                    formulaBudget: FormuleBudget,
                     weight: wAfstanden,
                     own: school.afstandWeging,
                     total: somAfstandWeging,
@@ -1182,10 +1231,10 @@
                     explanation: 'Voor afstanden gebruiken we één gezamenlijke score voor cultuur, zwembad en bib. Per vestiging is dat: leerlingen × (afstand cultuur + afstand zwembad + afstand bib). Hoe hoger die score, hoe groter het aandeel in de afstandspot.'
                 });
                 nextCalculationDetails[detailKeys.andere] = createShareCalculationDetail({
+                    ...budgetContext,
                     title: 'Andere',
                     school: detailSchoolLabel,
                     amount: subAndere,
-                    formulaBudget: FormuleBudget,
                     weight: wAndere,
                     own: school.totaalL,
                     total: somLln,
@@ -1246,66 +1295,67 @@
                 amount: resTotSokkel,
                 explanation: 'Dit is de som van alle sokkelbedragen. Het sokkelbedrag wordt één keer per instellingsnummer geteld, niet één keer per vestiging.',
                 formula: kanSokkelUitkeren
-                    ? `${formatCount(AantalScholen)} scholen × ${currencyFormatter.format(SokkelPerSchool)} = ${currencyFormatter.format(resTotSokkel)}`
-                    : `${formatCount(AantalScholen)} scholen × ${currencyFormatter.format(SokkelPerSchool)} past niet binnen het budget = ${currencyFormatter.format(resTotSokkel)}`,
+                    ? `${formatCount(AantalScholen)} scholen × ${currencyFormatter.format(SokkelPerSchool)} = ${currencyFormatter.format(resTotSokkel)}. Formulebudget daarna = ${createFormulaBudgetFormula(budgetContext)}`
+                    : `${formatCount(AantalScholen)} scholen × ${currencyFormatter.format(SokkelPerSchool)} past niet binnen het budget = ${currencyFormatter.format(resTotSokkel)}. Formulebudget = ${createFormulaBudgetFormula(budgetContext)}`,
                 steps: [
                     { label: 'Aantal scholen', value: formatCount(AantalScholen) },
                     { label: 'Sokkel per school', value: currencyFormatter.format(SokkelPerSchool) },
                     { label: 'Nodig voor alle sokkels', value: currencyFormatter.format(TotaalSokkelBudget) },
                     { label: 'Totaal budget', value: currencyFormatter.format(TotaalBudget) },
+                    { label: 'Formulebudget na sokkels', value: currencyFormatter.format(FormuleBudget) },
                     { label: 'Uitgekeerd in deze kolom', value: currencyFormatter.format(resTotSokkel) }
                 ],
                 note: kanSokkelUitkeren ? '' : 'Omdat alle sokkels samen hoger zijn dan het budget, worden de sokkels in dit model niet uitgekeerd.'
             });
             nextCalculationDetails['total-basis'] = createColumnTotalCalculationDetail({
+                ...budgetContext,
                 title: 'Basis (Lln)',
                 amount: resTotBasis,
-                formulaBudget: FormuleBudget,
                 weight: wBasis,
                 denominator: somLln,
                 denominatorLabel: 'Leerlingen alle scholen',
                 explanation: 'Dit is de volledige basispot die over alle scholen verdeeld werd volgens leerlingenaantal.'
             });
             nextCalculationDetails['total-middag'] = createColumnTotalCalculationDetail({
+                ...budgetContext,
                 title: 'Middag',
                 amount: resTotMiddag,
-                formulaBudget: FormuleBudget,
                 weight: wMiddag,
                 denominator: somMiddag,
                 denominatorLabel: 'Middag-leerlingen alle scholen',
                 explanation: 'Dit is de volledige middagpot die over alle scholen verdeeld werd volgens het aantal leerlingen dat op school eet.'
             });
             nextCalculationDetails['total-zwembadbezoek'] = createColumnTotalCalculationDetail({
+                ...budgetContext,
                 title: 'Zwembadbezoek',
                 amount: resTotZwembadBezoek,
-                formulaBudget: FormuleBudget,
                 weight: wZwembadBezoek,
                 denominator: somZwembadBezoekers,
                 denominatorLabel: 'Zwembadbezoeken alle scholen',
                 explanation: 'Dit is de volledige pot voor zwembadbezoek die over alle scholen verdeeld werd volgens het cumulatieve aantal zwembadbezoeken.'
             });
             nextCalculationDetails['total-sporthalbezoek'] = createColumnTotalCalculationDetail({
+                ...budgetContext,
                 title: 'Sporthalbezoek',
                 amount: resTotSporthalBezoek,
-                formulaBudget: FormuleBudget,
                 weight: wSporthalBezoek,
                 denominator: somSporthalBezoekers,
                 denominatorLabel: 'Sporthalbezoeken alle scholen',
                 explanation: 'Dit is de volledige pot voor sporthalbezoek die over alle scholen verdeeld werd volgens het cumulatieve aantal bezoeken aan de sportinfrastructuur.'
             });
             nextCalculationDetails['total-afstanden'] = createColumnTotalCalculationDetail({
+                ...budgetContext,
                 title: 'Afstanden',
                 amount: resTotAfstanden,
-                formulaBudget: FormuleBudget,
                 weight: wAfstanden,
                 denominator: somAfstandWeging,
                 denominatorLabel: 'Afstandsscore alle scholen',
                 explanation: 'Dit is de volledige afstandspot die over alle scholen verdeeld werd volgens de gezamenlijke afstandsscore voor cultuur, zwembad en bib.'
             });
             nextCalculationDetails['total-andere'] = createColumnTotalCalculationDetail({
+                ...budgetContext,
                 title: 'Andere',
                 amount: resTotAndere,
-                formulaBudget: FormuleBudget,
                 weight: wAndere,
                 denominator: somLln,
                 denominatorLabel: 'Leerlingen alle scholen',
