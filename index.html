@@ -19,6 +19,24 @@
             border-color: #3b82f6;
             box-shadow: 0 0 0 1px #3b82f6;
         }
+        .result-amount-button {
+            width: 100%;
+            border-radius: 0.25rem;
+            border-bottom: 1px dotted #64748b;
+            padding: 0.125rem 0.25rem;
+            text-align: right;
+            cursor: pointer;
+        }
+        .result-amount-button:hover,
+        .result-amount-button:focus {
+            background-color: #eff6ff;
+            color: #1d4ed8;
+            outline: none;
+        }
+        .result-amount-button.is-active {
+            background-color: #dbeafe;
+            color: #1d4ed8;
+        }
     </style>
 </head>
 <body class="bg-slate-50 text-slate-800 font-sans p-4 md:p-8">
@@ -32,88 +50,169 @@
         </header>
 
         <!-- Parameters Sectie -->
-        <section class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
-            <h2 class="text-xl font-semibold mb-4 border-b pb-2">1. Algemene Parameters & Gewichten</h2>
-            
-            <!-- Uitleg voor het stadsbestuur -->
-            <div class="bg-blue-50 border-l-4 border-blue-500 p-4 mb-6 rounded-r-md text-sm text-blue-900 shadow-sm">
-                <p class="font-bold mb-1">Beleidskeuzes Stadsbestuur</p>
-                <p>Via onderstaande parameters bepaalt u uw beleidsprioriteiten. Door de percentages te wijzigen, kiest u welk criterium zwaarder of lichter doorweegt in de finale verdeling van de pot. U kunt er ook voor kiezen om (al dan niet) met een 'sokkelbedrag' te werken: een gegarandeerd startbedrag voor elke school. Wenst u dit niet? Zet dit bedrag dan simpelweg op € 0.</p>
+        <section class="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+            <div class="border-b border-slate-200 bg-slate-900 px-6 py-5 text-white">
+                <div class="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+                    <div>
+                        <p class="text-xs font-semibold uppercase tracking-wide text-cyan-200">Stap 1</p>
+                        <h2 class="mt-1 text-2xl font-bold">Algemene Parameters & Gewichten</h2>
+                        <p class="mt-2 max-w-3xl text-sm leading-6 text-slate-200">Kies eerst het totaalbudget en de sokkel. Verdeel daarna het formulebudget over de beleidsprioriteiten met gewichten die samen 100% vormen.</p>
+                    </div>
+                    <div class="flex max-w-full items-center gap-2 rounded-md border border-white/20 bg-white/10 px-3 py-2 text-xs font-semibold text-cyan-50 sm:w-fit">
+                        <span class="shrink-0" aria-hidden="true">%</span>
+                        <span class="min-w-0">Gewichten sturen deelpotten, geen rechtstreekse bedragen</span>
+                    </div>
+                </div>
             </div>
-            
-            <div class="grid grid-cols-1 xl:grid-cols-2 gap-6 mb-6">
+
+            <div class="space-y-6 p-6">
+                <!-- Uitleg voor het stadsbestuur -->
+                <div class="grid gap-4 rounded-lg border border-sky-200 bg-sky-50 p-4 text-sm text-sky-950 md:grid-cols-[1.4fr_1fr]">
+                    <div>
+                        <p class="font-bold">Beleidskeuzes Stadsbestuur</p>
+                        <p class="mt-1 leading-6">Via onderstaande parameters bepaalt u uw beleidsprioriteiten. Door de percentages te wijzigen, kiest u welk criterium zwaarder of lichter doorweegt in de finale verdeling van de pot.</p>
+                        <p class="mt-2 leading-6">Een gewicht is geen rechtstreeks subsidiepercentage per school. Het bepaalt eerst welk deel van het formulebudget naar een deelpot gaat; daarna verdeelt de formule die deelpot volgens aantallen of volgens de transportnood.</p>
+                    </div>
+                    <div class="rounded-md border border-sky-200 bg-white/70 p-3">
+                        <p class="text-xs font-bold uppercase tracking-wide text-sky-700">Leeswijzer</p>
+                        <div class="mt-3 space-y-2 text-xs leading-5 text-sky-900">
+                            <p><span class="font-bold">1.</span> Sokkelbedrag wordt vooraf vast toegekend per instellingsnummer.</p>
+                            <p><span class="font-bold">2.</span> De rest wordt verdeeld via de percentages hieronder.</p>
+                            <p><span class="font-bold">3.</span> De som van de gewichten moet exact 100% zijn.</p>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Totale budgetten -->
-                <div class="bg-blue-50 p-4 rounded-lg border border-blue-100 xl:col-span-2 flex flex-wrap gap-4 items-center justify-between">
-                    <div>
-                        <label class="block text-sm font-bold text-blue-900">Totaal Budget Stad Tielt (€)</label>
-                        <input type="number" id="param-budget" class="mt-1 block w-48 rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-lg font-bold p-2" value="110000" step="1000">
+                <div class="grid gap-4 lg:grid-cols-2">
+                    <div class="rounded-lg border border-emerald-200 bg-emerald-50 p-4">
+                        <div class="flex items-start justify-between gap-3">
+                            <div>
+                                <label class="block text-sm font-bold text-emerald-950" for="param-budget">Totaal Budget Stad Tielt</label>
+                                <p class="mt-1 text-xs leading-5 text-emerald-800">Het volledige subsidiebedrag dat in de simulatie beschikbaar is.</p>
+                            </div>
+                            <span class="rounded-md bg-emerald-100 px-2 py-1 text-sm font-bold text-emerald-800">€</span>
+                        </div>
+                        <div class="relative mt-3">
+                            <span class="pointer-events-none absolute inset-y-0 left-3 flex items-center text-sm font-bold text-emerald-700">€</span>
+                            <input type="number" id="param-budget" class="block w-full rounded-md border border-emerald-200 bg-white py-3 pl-8 pr-3 text-lg font-bold text-slate-900 shadow-sm focus:border-emerald-500 focus:ring-emerald-500" value="110000" step="1000">
+                        </div>
                     </div>
-                    <div>
-                        <label class="block text-sm font-bold text-blue-900">Vast Sokkelbedrag per school (€)</label>
-                        <p class="text-xs text-blue-700 mb-1">Wordt vooraf afgetrokken en 1x per instellingsnummer toegekend</p>
-                        <input type="number" id="param-sokkel" class="block w-48 rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2" value="1000" step="100">
-                    </div>
-                </div>
 
-                <!-- Rubriek: Aantallen -->
-                <div class="bg-slate-50 p-4 rounded-lg border border-slate-200">
-                    <h3 class="text-sm font-bold text-slate-800 mb-3 uppercase tracking-wide">Rubriek: Aantallen</h3>
-                    <div class="grid grid-cols-1 sm:grid-cols-2 2xl:grid-cols-3 gap-4">
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700">Gewicht: Lln-aantal (%)</label>
-                            <p class="text-xs text-gray-500 mb-1 min-h-[3rem] leading-snug">Basisfinanciering voor algemene werking o.b.v. schoolgrootte.</p>
-                            <input type="number" id="weight-basis" class="weight-input mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2 border" value="15">
+                    <div class="rounded-lg border border-amber-200 bg-amber-50 p-4">
+                        <div class="flex items-start justify-between gap-3">
+                            <div>
+                                <label class="block text-sm font-bold text-amber-950" for="param-sokkel">Vast Sokkelbedrag per school</label>
+                                <p class="mt-1 text-xs leading-5 text-amber-800">Wordt vooraf afgetrokken en 1x per instellingsnummer toegekend.</p>
+                            </div>
+                            <span class="rounded-md bg-amber-100 px-2 py-1 text-sm font-bold text-amber-800">Sokkel</span>
                         </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700">Gewicht: Middagtoezicht (%)</label>
-                            <p class="text-xs text-gray-500 mb-1 min-h-[3rem] leading-snug">Sociale tussenkomst voor scholen met veel etende leerlingen.</p>
-                            <input type="number" id="weight-middag" class="weight-input mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2 border" value="20">
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700">Gewicht: Zwemmers (%)</label>
-                            <p class="text-xs text-gray-500 mb-1 min-h-[3rem] leading-snug">Extra steun op basis van het aantal leerlingen dat gaat zwemmen.</p>
-                            <input type="number" id="weight-zwemmers" class="weight-input mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2 border" value="20">
+                        <div class="relative mt-3">
+                            <span class="pointer-events-none absolute inset-y-0 left-3 flex items-center text-sm font-bold text-amber-700">€</span>
+                            <input type="number" id="param-sokkel" class="block w-full rounded-md border border-amber-200 bg-white py-3 pl-8 pr-3 text-lg font-bold text-slate-900 shadow-sm focus:border-amber-500 focus:ring-amber-500" value="1000" step="100">
                         </div>
                     </div>
                 </div>
 
-                <!-- Rubriek: Afstanden -->
-                <div class="bg-slate-50 p-4 rounded-lg border border-slate-200">
-                    <h3 class="text-sm font-bold text-slate-800 mb-3 uppercase tracking-wide">Rubriek: Afstanden</h3>
-                    <div class="grid grid-cols-1 sm:grid-cols-2 2xl:grid-cols-3 gap-4">
+                <div>
+                    <div class="mb-3 flex flex-wrap items-center justify-between gap-2">
                         <div>
-                            <label class="block text-sm font-medium text-gray-700">Gewicht: Cultuur (%)</label>
-                            <p class="text-xs text-gray-500 mb-1 min-h-[3rem] leading-snug">Subsidieert busritten naar CC. Weegt zwaarder bij grotere afstand.</p>
-                            <input type="number" id="weight-cultuur" class="weight-input mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2 border" value="10">
+                            <h3 class="text-sm font-bold uppercase tracking-wide text-slate-800">Gewichten per verdeelsleutel</h3>
+                            <p class="mt-1 text-xs text-slate-500">Elk veld bepaalt hoeveel budget naar die rubriek gaat.</p>
                         </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700">Gewicht: Zwembad (%)</label>
-                            <p class="text-xs text-gray-500 mb-1 min-h-[3rem] leading-snug">Subsidieert vervoer naar zwembad o.b.v. afstand en lln-aantal.</p>
-                            <input type="number" id="weight-zwembad" class="weight-input mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2 border" value="10">
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700">Gewicht: Bib (%)</label>
-                            <p class="text-xs text-gray-500 mb-1 min-h-[3rem] leading-snug">Subsidieert vervoer naar de bib o.b.v. afstand en lln-aantal.</p>
-                            <input type="number" id="weight-bib" class="weight-input mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2 border" value="10">
-                        </div>
+                        <span class="rounded-md border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-semibold text-slate-600">Totaal moet 100% zijn</span>
                     </div>
-                </div>
 
-                <!-- Rubriek: Andere -->
-                <div class="bg-slate-50 p-4 rounded-lg border border-slate-200">
-                    <h3 class="text-sm font-bold text-slate-800 mb-3 uppercase tracking-wide">Rubriek: Andere</h3>
-                    <div class="grid grid-cols-1 gap-4 max-w-md">
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700">Gewicht: Andere (%)</label>
-                            <p class="text-xs text-gray-500 mb-1 min-h-[3rem] leading-snug">Vrije ruimte voor specifieke projecten (EHBO, fluo, veiligheid, ...).</p>
-                            <input type="number" id="weight-andere" class="weight-input mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2 border" value="15">
+                    <div class="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+                        <div class="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+                            <div class="flex items-start gap-3">
+                                <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-cyan-50 text-xl" aria-hidden="true">👥</span>
+                                <div class="min-w-0 flex-1">
+                                    <label class="block text-sm font-bold text-slate-900" for="weight-basis">Gewicht: Lln-aantal</label>
+                                    <p class="mt-1 min-h-[4.25rem] text-xs leading-5 text-slate-500">Reserveert een basispot voor algemene werking. Die pot wordt daarna verdeeld volgens het aantal leerlingen per school.</p>
+                                </div>
+                            </div>
+                            <div class="mt-3 flex rounded-md shadow-sm">
+                                <input type="number" id="weight-basis" class="weight-input block min-w-0 flex-1 rounded-l-md border border-slate-300 bg-slate-50 py-2.5 pl-3 pr-3 text-lg font-bold text-slate-900 focus:z-10 focus:border-blue-500 focus:ring-blue-500" value="15">
+                                <span class="inline-flex items-center rounded-r-md border border-l-0 border-slate-300 bg-slate-100 px-3 text-sm font-bold text-slate-500">%</span>
+                            </div>
+                        </div>
+
+                        <div class="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+                            <div class="flex items-start gap-3">
+                                <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-rose-50 text-xl" aria-hidden="true">👥</span>
+                                <div class="min-w-0 flex-1">
+                                    <label class="block text-sm font-bold text-slate-900" for="weight-middag">Gewicht: Middagtoezicht</label>
+                                    <p class="mt-1 min-h-[4.25rem] text-xs leading-5 text-slate-500">Reserveert de middagpot. Scholen krijgen daaruit hun aandeel volgens het aantal leerlingen dat op school eet.</p>
+                                </div>
+                            </div>
+                            <div class="mt-3 flex rounded-md shadow-sm">
+                                <input type="number" id="weight-middag" class="weight-input block min-w-0 flex-1 rounded-l-md border border-slate-300 bg-slate-50 py-2.5 pl-3 pr-3 text-lg font-bold text-slate-900 focus:z-10 focus:border-blue-500 focus:ring-blue-500" value="20">
+                                <span class="inline-flex items-center rounded-r-md border border-l-0 border-slate-300 bg-slate-100 px-3 text-sm font-bold text-slate-500">%</span>
+                            </div>
+                        </div>
+
+                        <div class="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+                            <div class="flex items-start gap-3">
+                                <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-blue-50 text-xl" aria-hidden="true">👥</span>
+                                <div class="min-w-0 flex-1">
+                                    <label class="block text-sm font-bold text-slate-900" for="weight-zwembadbezoek">Gewicht: Zwembadbezoek</label>
+                                    <p class="mt-1 min-h-[4.25rem] text-xs leading-5 text-slate-500">Reserveert de zwembadpot. De verdeling volgt het cumulatieve aantal zwembadbezoeken per school.</p>
+                                </div>
+                            </div>
+                            <div class="mt-3 flex rounded-md shadow-sm">
+                                <input type="number" id="weight-zwembadbezoek" class="weight-input block min-w-0 flex-1 rounded-l-md border border-slate-300 bg-slate-50 py-2.5 pl-3 pr-3 text-lg font-bold text-slate-900 focus:z-10 focus:border-blue-500 focus:ring-blue-500" value="10">
+                                <span class="inline-flex items-center rounded-r-md border border-l-0 border-slate-300 bg-slate-100 px-3 text-sm font-bold text-slate-500">%</span>
+                            </div>
+                        </div>
+
+                        <div class="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+                            <div class="flex items-start gap-3">
+                                <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-violet-50 text-xl" aria-hidden="true">👥</span>
+                                <div class="min-w-0 flex-1">
+                                    <label class="block text-sm font-bold text-slate-900" for="weight-sporthalbezoek">Gewicht: Sporthalbezoek</label>
+                                    <p class="mt-1 min-h-[4.25rem] text-xs leading-5 text-slate-500">Reserveert de sporthalpot. De verdeling volgt het cumulatieve aantal bezoeken aan de sportinfrastructuur.</p>
+                                </div>
+                            </div>
+                            <div class="mt-3 flex rounded-md shadow-sm">
+                                <input type="number" id="weight-sporthalbezoek" class="weight-input block min-w-0 flex-1 rounded-l-md border border-slate-300 bg-slate-50 py-2.5 pl-3 pr-3 text-lg font-bold text-slate-900 focus:z-10 focus:border-blue-500 focus:ring-blue-500" value="10">
+                                <span class="inline-flex items-center rounded-r-md border border-l-0 border-slate-300 bg-slate-100 px-3 text-sm font-bold text-slate-500">%</span>
+                            </div>
+                        </div>
+
+                        <div class="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+                            <div class="flex items-start gap-3">
+                                <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-orange-50 text-xl" aria-hidden="true">🚌</span>
+                                <div class="min-w-0 flex-1">
+                                    <label class="block text-sm font-bold text-slate-900" for="weight-afstanden">Gewicht: Afstanden</label>
+                                    <p class="mt-1 min-h-[4.25rem] text-xs leading-5 text-slate-500">Reserveert de transportpot. Die pot gaat relatief sterker naar scholen met meer leerlingen en grotere afstanden naar cultuur, zwembad en bib.</p>
+                                </div>
+                            </div>
+                            <div class="mt-3 flex rounded-md shadow-sm">
+                                <input type="number" id="weight-afstanden" class="weight-input block min-w-0 flex-1 rounded-l-md border border-slate-300 bg-slate-50 py-2.5 pl-3 pr-3 text-lg font-bold text-slate-900 focus:z-10 focus:border-blue-500 focus:ring-blue-500" value="30">
+                                <span class="inline-flex items-center rounded-r-md border border-l-0 border-slate-300 bg-slate-100 px-3 text-sm font-bold text-slate-500">%</span>
+                            </div>
+                        </div>
+
+                        <div class="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+                            <div class="flex items-start gap-3">
+                                <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-emerald-50 text-xl" aria-hidden="true">👥</span>
+                                <div class="min-w-0 flex-1">
+                                    <label class="block text-sm font-bold text-slate-900" for="weight-andere">Gewicht: Andere</label>
+                                    <p class="mt-1 min-h-[4.25rem] text-xs leading-5 text-slate-500">Reserveert vrije ruimte voor specifieke projecten. In deze simulatie wordt die pot verdeeld volgens leerlingenaantal.</p>
+                                </div>
+                            </div>
+                            <div class="mt-3 flex rounded-md shadow-sm">
+                                <input type="number" id="weight-andere" class="weight-input block min-w-0 flex-1 rounded-l-md border border-slate-300 bg-slate-50 py-2.5 pl-3 pr-3 text-lg font-bold text-slate-900 focus:z-10 focus:border-blue-500 focus:ring-blue-500" value="15">
+                                <span class="inline-flex items-center rounded-r-md border border-l-0 border-slate-300 bg-slate-100 px-3 text-sm font-bold text-slate-500">%</span>
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
 
             <!-- Validatie Banner voor percentages -->
-            <div id="weight-warning" class="hidden bg-red-100 border-l-4 border-red-500 text-red-700 p-4 rounded" role="alert">
+            <div id="weight-warning" class="mx-6 mb-6 hidden rounded-md border-l-4 border-red-500 bg-red-100 p-4 text-red-700" role="alert">
                 <p class="font-bold">Let op!</p>
                 <p>De som van de percentages is momenteel <span id="weight-total-display"></span>%. Dit moet exact 100% zijn voor een correcte verdeling.</p>
             </div>
@@ -140,6 +239,16 @@
                 <p id="source-metadata-opmerkingen"><strong>Opmerkingen:</strong> Nog niet geladen.</p>
                 <p id="source-metadata-generated"><strong>Gegenereerd op:</strong> -</p>
             </div>
+            <div class="mb-4 grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+                <div class="rounded-md border border-slate-200 bg-slate-50 p-3">
+                    <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">Cumulatief zwembadbezoek</p>
+                    <p id="summary-zwembad-bezoekers" class="mt-1 text-2xl font-bold text-slate-900">0</p>
+                </div>
+                <div class="rounded-md border border-slate-200 bg-slate-50 p-3">
+                    <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">Cumulatief sporthalbezoek</p>
+                    <p id="summary-sporthal-bezoekers" class="mt-1 text-2xl font-bold text-slate-900">0</p>
+                </div>
+            </div>
             <div class="overflow-x-auto">
                 <table class="min-w-full divide-y divide-gray-200 text-sm">
                     <thead class="bg-gray-50">
@@ -149,7 +258,8 @@
                             <th scope="col" class="px-3 py-3 text-left font-medium text-gray-500 uppercase tracking-wider">Vestiging / Adres</th>
                             <th scope="col" class="px-3 py-3 text-right font-medium text-gray-500 uppercase tracking-wider" title="Totaal aantal leerlingen">Aantal Lln</th>
                             <th scope="col" class="px-3 py-3 text-right font-medium text-gray-500 uppercase tracking-wider" title="Aantal leerlingen dat op school eet">Lln Middag</th>
-                            <th scope="col" class="px-3 py-3 text-right font-medium text-gray-500 uppercase tracking-wider" title="Aantal leerlingen dat gaat zwemmen">Lln Zwemmen</th>
+                            <th scope="col" class="px-3 py-3 text-right font-medium text-gray-500 uppercase tracking-wider" title="Cumulatief bezoekersaantal zwembad">Cumulatief Zwembad</th>
+                            <th scope="col" class="px-3 py-3 text-right font-medium text-gray-500 uppercase tracking-wider" title="Cumulatief bezoekersaantal sportinfrastructuur">Cumulatief Sporthal</th>
                             <th scope="col" class="px-3 py-3 text-right font-medium text-gray-500 uppercase tracking-wider" title="Afstand enkele rit in km">Afstand Cultuur (km)</th>
                             <th scope="col" class="px-3 py-3 text-right font-medium text-gray-500 uppercase tracking-wider" title="Afstand enkele rit in km">Afstand Zwembad (km)</th>
                             <th scope="col" class="px-3 py-3 text-right font-medium text-gray-500 uppercase tracking-wider" title="Afstand enkele rit in km">Afstand Bib (km)</th>
@@ -165,6 +275,7 @@
                             <td id="tot-lln" class="px-3 py-3 text-right">0</td>
                             <td id="tot-mid" class="px-3 py-3 text-right">0</td>
                             <td id="tot-zwem" class="px-3 py-3 text-right">0</td>
+                            <td id="tot-sporthal" class="px-3 py-3 text-right">0</td>
                             <td id="totals-fill-cells" colspan="4"></td>
                         </tr>
                     </tfoot>
@@ -193,10 +304,9 @@
                             <th scope="col" class="px-3 py-3 text-right font-medium uppercase tracking-wider">Sokkelbedrag</th>
                             <th scope="col" class="px-3 py-3 text-right font-medium uppercase tracking-wider">Basis (Lln)</th>
                             <th scope="col" class="px-3 py-3 text-right font-medium uppercase tracking-wider">Middag</th>
-                            <th scope="col" class="px-3 py-3 text-right font-medium uppercase tracking-wider">Cultuur</th>
-                            <th scope="col" class="px-3 py-3 text-right font-medium uppercase tracking-wider">Zwembad</th>
-                            <th scope="col" class="px-3 py-3 text-right font-medium uppercase tracking-wider">Zwemlessen</th>
-                            <th scope="col" class="px-3 py-3 text-right font-medium uppercase tracking-wider">Bib</th>
+                            <th scope="col" class="px-3 py-3 text-right font-medium uppercase tracking-wider">Zwembadbezoek</th>
+                            <th scope="col" class="px-3 py-3 text-right font-medium uppercase tracking-wider">Sporthalbezoek</th>
+                            <th scope="col" class="px-3 py-3 text-right font-medium uppercase tracking-wider">Afstanden</th>
                             <th scope="col" class="px-3 py-3 text-right font-medium uppercase tracking-wider">Andere</th>
                             <th scope="col" class="px-3 py-3 text-right font-bold uppercase tracking-wider text-yellow-300 rounded-tr-lg">Totaal (€)</th>
                         </tr>
@@ -210,10 +320,9 @@
                             <td id="res-tot-sokkel" class="px-3 py-4 text-right">€ 0</td>
                             <td id="res-tot-basis" class="px-3 py-4 text-right">€ 0</td>
                             <td id="res-tot-middag" class="px-3 py-4 text-right">€ 0</td>
-                            <td id="res-tot-cultuur" class="px-3 py-4 text-right">€ 0</td>
-                            <td id="res-tot-zwembad" class="px-3 py-4 text-right">€ 0</td>
-                            <td id="res-tot-zwemmers" class="px-3 py-4 text-right">€ 0</td>
-                            <td id="res-tot-bib" class="px-3 py-4 text-right">€ 0</td>
+                            <td id="res-tot-zwembadbezoek" class="px-3 py-4 text-right">€ 0</td>
+                            <td id="res-tot-sporthalbezoek" class="px-3 py-4 text-right">€ 0</td>
+                            <td id="res-tot-afstanden" class="px-3 py-4 text-right">€ 0</td>
                             <td id="res-tot-andere" class="px-3 py-4 text-right">€ 0</td>
                             <td id="res-tot-alles" class="px-3 py-4 text-right text-lg text-green-700">€ 0</td>
                         </tr>
@@ -241,17 +350,21 @@
                     <p class="mb-1">Verdeeld op basis van het aandeel etende leerlingen.</p>
                     <p class="mb-4"><code class="bg-slate-100 text-blue-800 px-2 py-1 rounded">Formulebudget × Gewicht % × (Eigen middag-lln / Totaal middag-lln)</code></p>
 
-                    <h3 class="font-bold text-slate-800 mb-1">Zwemlessen (Aantal zwemmers)</h3>
-                    <p class="mb-1">Extra subsidie op basis van het aandeel leerlingen dat effectief gaat zwemmen.</p>
-                    <p class="mb-4"><code class="bg-slate-100 text-blue-800 px-2 py-1 rounded">Formulebudget × Gewicht % × (Eigen zwemmers / Totaal zwemmers)</code></p>
+                    <h3 class="font-bold text-slate-800 mb-1">Zwembadbezoek</h3>
+                    <p class="mb-1">Extra subsidie op basis van het aandeel in het cumulatieve bezoekersaantal van het zwembad.</p>
+                    <p class="mb-4"><code class="bg-slate-100 text-blue-800 px-2 py-1 rounded">Formulebudget × Gewicht % × (Eigen zwembadbezoekers / Totaal zwembadbezoekers)</code></p>
+
+                    <h3 class="font-bold text-slate-800 mb-1">Sporthalbezoek</h3>
+                    <p class="mb-1">Extra subsidie op basis van het aandeel in het cumulatieve bezoekersaantal van de sporthal.</p>
+                    <p class="mb-4"><code class="bg-slate-100 text-blue-800 px-2 py-1 rounded">Formulebudget × Gewicht % × (Eigen sporthalbezoekers / Totaal sporthalbezoekers)</code></p>
                 </div>
                 <div>
-                    <h3 class="font-bold text-slate-800 mb-1">Cultuur, Zwembad (Vervoer) & Bib (Vervoer)</h3>
-                    <p class="mb-3">Hierbij wordt rekening gehouden met <strong>zowel het aantal leerlingen als de afstand</strong>. Een grote school die ver ligt, heeft meer bussen nodig en weegt dus zwaarder door dan een kleine school die dichtbij ligt.</p>
+                    <h3 class="font-bold text-slate-800 mb-1">Afstanden</h3>
+                    <p class="mb-3">De drie afstandstypes worden samen in één percentage ondergebracht. Hierbij wordt rekening gehouden met <strong>zowel het aantal leerlingen als de afstand</strong>. Een grote school die ver ligt, heeft meer bussen nodig en weegt dus zwaarder door dan een kleine school die dichtbij ligt.</p>
                     
                     <div class="bg-slate-50 p-3 rounded border border-slate-200">
                         <p class="mb-1 text-xs font-bold text-slate-500 uppercase tracking-wide">Stap 1: Bereken de 'weging' per school</p>
-                        <p class="mb-3"><code class="bg-slate-100 text-blue-800 px-2 py-1 rounded">Weging = Eigen Lln × Eigen Afstand (in km)</code></p>
+                        <p class="mb-3"><code class="bg-slate-100 text-blue-800 px-2 py-1 rounded">Weging = Lln × (Afstand cultuur + Afstand zwembad + Afstand bib)</code></p>
                         
                         <p class="mb-1 text-xs font-bold text-slate-500 uppercase tracking-wide">Stap 2: Bereken de effectieve subsidie</p>
                         <p><code class="bg-slate-100 text-blue-800 px-2 py-1 rounded">Formulebudget × Gewicht % × (Eigen Weging / Som alle wegingen)</code></p>
@@ -262,12 +375,36 @@
 
     </div>
 
+    <div id="calculation-panel-backdrop" class="hidden fixed inset-0 z-40 bg-slate-900/20" onclick="closeCalculationPanel()"></div>
+    <aside id="calculation-panel" class="hidden fixed inset-y-0 right-0 z-50 flex w-full max-w-xl flex-col border-l border-slate-200 bg-white shadow-2xl" aria-hidden="true" aria-labelledby="calculation-panel-title">
+        <header class="flex items-start justify-between gap-4 border-b border-slate-200 p-5">
+            <div>
+                <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">Berekening</p>
+                <h2 id="calculation-panel-title" class="mt-1 text-xl font-bold text-slate-900">Details</h2>
+                <p id="calculation-panel-school" class="mt-1 text-sm text-slate-500"></p>
+            </div>
+            <button type="button" onclick="closeCalculationPanel()" class="rounded p-2 text-2xl leading-none text-slate-500 hover:bg-slate-100 hover:text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500" title="Sluiten" aria-label="Sluiten">&times;</button>
+        </header>
+        <div class="flex-1 overflow-y-auto p-5">
+            <p id="calculation-panel-amount" class="text-3xl font-bold text-green-700"></p>
+            <p id="calculation-panel-explanation" class="mt-4 text-sm leading-6 text-slate-700"></p>
+
+            <div class="mt-5 border-t border-slate-200 pt-5">
+                <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">Formule met deze cijfers</p>
+                <code id="calculation-panel-formula" class="mt-2 block whitespace-normal rounded bg-slate-100 px-3 py-2 text-sm leading-6 text-blue-900"></code>
+            </div>
+
+            <dl id="calculation-panel-steps" class="mt-5 divide-y divide-slate-200 border-y border-slate-200 text-sm"></dl>
+            <p id="calculation-panel-note" class="mt-5 rounded border border-amber-200 bg-amber-50 p-3 text-sm leading-6 text-amber-900"></p>
+        </div>
+    </aside>
+
     <!-- ========================================== -->
     <!-- JAVASCRIPT LOGICA & BEREKENINGEN           -->
     <!-- ========================================== -->
     <script>
         // 1. DATA: bron endpoint + lokale fallback als back-up
-        // L = Leerlingen, M = Middagtoezicht, S = Zwemmers, C/Z/B = Afstanden in km.
+        // L = Leerlingen, M = Middagtoezicht, S = cumulatief zwembadbezoek, SI = cumulatief sportinfrastructuurbezoek, C/Z/B = Afstanden in km.
         const DATA_ENDPOINT_URL = 'https://script.google.com/macros/s/AKfycbwBLiwvWUS33k7jKMQ0oVwOqoq0Jya2d8V1S8Dc9p6uFlmqKbgYpkOJ-AM9xcAETXCXCQ/exec';
         const fallbackVestigingenData = [
             { id: 1, instellingsnummer: "INST-001", schoolNaam: "VBS Heilige Familie", vestigingNaam: "Hoofdvestiging", L: 250, M: 180, C: 1.2, Z: 2.0, B: 1.0 },
@@ -286,11 +423,17 @@
             { id: 14, instellingsnummer: "INST-012", schoolNaam: "VBS 't Veld", vestigingNaam: "Hoofdvestiging", L: 190, M: 145, C: 6.0, Z: 5.8, B: 6.2 },
             { id: 15, instellingsnummer: "INST-013", schoolNaam: "VKS Sint-Lutgardis", vestigingNaam: "Hoofdvestiging", L: 190, M: 145, C: 6.0, Z: 5.8, B: 6.2 }
         ];
-        const vestigingenData = fallbackVestigingenData.map(vestiging => ({ ...vestiging }));
+        const vestigingenData = fallbackVestigingenData.map(vestiging => ({
+            ...vestiging,
+            S: toNumber(vestiging.S ?? vestiging.L),
+            SI: toNumber(vestiging.SI)
+        }));
         let isEditMode = false;
 
         // Formatter om getallen mooi als Euro (€) weer te geven
         const currencyFormatter = new Intl.NumberFormat('nl-BE', { style: 'currency', currency: 'EUR' });
+        let calculationDetails = {};
+        let activeCalculationKey = null;
 
         // 2. FUNCTIES VOOR DE GEBRUIKERSINTERFACE (UI)
         function toNumber(value) {
@@ -313,6 +456,185 @@
 
         function formatDistance(value) {
             return toNumber(value).toLocaleString('nl-BE', { minimumFractionDigits: 1, maximumFractionDigits: 3 });
+        }
+
+        function formatDecimal(value, maximumFractionDigits = 2) {
+            return toNumber(value).toLocaleString('nl-BE', {
+                minimumFractionDigits: 0,
+                maximumFractionDigits
+            });
+        }
+
+        function formatWeight(value) {
+            return `${formatDecimal(value, 2)}%`;
+        }
+
+        function formatShare(numerator, denominator) {
+            if (toNumber(denominator) <= 0) return '0%';
+            return `${formatDecimal((toNumber(numerator) / toNumber(denominator)) * 100, 2)}%`;
+        }
+
+        function makeAmountButton(calculationKey, amount, extraClass = '') {
+            return `<button type="button" class="result-amount-button ${extraClass}" data-calculation-key="${escapeHtml(calculationKey)}" title="Toon berekening">${currencyFormatter.format(amount)}</button>`;
+        }
+
+        function showCalculationDetail(calculationKey) {
+            const detail = calculationDetails[calculationKey];
+            if (!detail) return;
+
+            activeCalculationKey = calculationKey;
+            renderCalculationPanel(detail);
+
+            const backdrop = document.getElementById('calculation-panel-backdrop');
+            const panel = document.getElementById('calculation-panel');
+            if (backdrop) backdrop.classList.remove('hidden');
+            if (panel) {
+                panel.classList.remove('hidden');
+                panel.setAttribute('aria-hidden', 'false');
+            }
+            markActiveCalculationButton();
+        }
+
+        function closeCalculationPanel() {
+            activeCalculationKey = null;
+            const backdrop = document.getElementById('calculation-panel-backdrop');
+            const panel = document.getElementById('calculation-panel');
+            if (backdrop) backdrop.classList.add('hidden');
+            if (panel) {
+                panel.classList.add('hidden');
+                panel.setAttribute('aria-hidden', 'true');
+            }
+            markActiveCalculationButton();
+        }
+
+        function markActiveCalculationButton() {
+            document.querySelectorAll('[data-calculation-key]').forEach(button => {
+                button.classList.toggle('is-active', button.getAttribute('data-calculation-key') === activeCalculationKey);
+            });
+        }
+
+        function renderCalculationPanel(detail) {
+            const titleEl = document.getElementById('calculation-panel-title');
+            const schoolEl = document.getElementById('calculation-panel-school');
+            const amountEl = document.getElementById('calculation-panel-amount');
+            const explanationEl = document.getElementById('calculation-panel-explanation');
+            const formulaEl = document.getElementById('calculation-panel-formula');
+            const stepsEl = document.getElementById('calculation-panel-steps');
+            const noteEl = document.getElementById('calculation-panel-note');
+            if (!titleEl || !schoolEl || !amountEl || !explanationEl || !formulaEl || !stepsEl || !noteEl) return;
+
+            titleEl.textContent = detail.title;
+            schoolEl.textContent = detail.school ? detail.school : '';
+            amountEl.textContent = currencyFormatter.format(detail.amount);
+            explanationEl.textContent = detail.explanation;
+            formulaEl.textContent = detail.formula;
+            stepsEl.innerHTML = detail.steps.map(step => `
+                <div class="grid grid-cols-2 gap-4 py-3">
+                    <dt class="text-slate-500">${escapeHtml(step.label)}</dt>
+                    <dd class="text-right font-semibold text-slate-900">${escapeHtml(step.value)}</dd>
+                </div>
+            `).join('');
+
+            const note = detail.note || '';
+            noteEl.textContent = note;
+            noteEl.classList.toggle('hidden', !note);
+        }
+
+        function createShareCalculationDetail(options) {
+            const own = toNumber(options.own);
+            const total = toNumber(options.total);
+            const weight = toNumber(options.weight);
+            const formulaBudget = toNumber(options.formulaBudget);
+            const rubriekBudget = formulaBudget * (weight / 100);
+            const ownLabel = options.ownLabel || 'Eigen aandeel';
+            const totalLabel = options.totalLabel || 'Totaal aandeel';
+            const unit = options.unit || '';
+            const ownValue = unit ? `${formatDecimal(own, 2)} ${unit}` : formatDecimal(own, 2);
+            const totalValue = unit ? `${formatDecimal(total, 2)} ${unit}` : formatDecimal(total, 2);
+            const formula = total > 0
+                ? `${currencyFormatter.format(formulaBudget)} × ${formatWeight(weight)} × (${formatDecimal(own, 2)} / ${formatDecimal(total, 2)}) = ${currencyFormatter.format(options.amount)}`
+                : `${currencyFormatter.format(formulaBudget)} × ${formatWeight(weight)} × 0 = ${currencyFormatter.format(options.amount)}`;
+
+            return {
+                title: options.title,
+                school: options.school,
+                amount: options.amount,
+                explanation: options.explanation,
+                formula,
+                steps: [
+                    { label: 'Formulebudget', value: currencyFormatter.format(formulaBudget) },
+                    { label: `Gewicht ${options.title}`, value: formatWeight(weight) },
+                    { label: `Pot voor ${options.title}`, value: currencyFormatter.format(rubriekBudget) },
+                    { label: ownLabel, value: ownValue },
+                    { label: totalLabel, value: totalValue },
+                    { label: 'Aandeel van deze school', value: formatShare(own, total) },
+                    { label: 'Resultaat', value: currencyFormatter.format(options.amount) }
+                ],
+                note: total > 0 ? '' : `Er is geen totaal voor ${totalLabel.toLowerCase()}. Daarom wordt deze rubriek op € 0 gezet.`
+            };
+        }
+
+        function createSokkelCalculationDetail(options) {
+            const explanation = options.kanSokkelUitkeren
+                ? 'Het sokkelbedrag is een vast startbedrag per school. Vestigingen met hetzelfde instellingsnummer tellen samen als één school, dus dit bedrag wordt één keer toegekend.'
+                : 'Het totale budget is te klein om alle sokkelbedragen uit te betalen. Daarom zet het model het sokkelbedrag op € 0.';
+
+            return {
+                title: 'Sokkelbedrag',
+                school: options.school,
+                amount: options.amount,
+                explanation,
+                formula: options.kanSokkelUitkeren
+                    ? `${currencyFormatter.format(options.sokkelPerSchool)} = ${currencyFormatter.format(options.amount)}`
+                    : `${currencyFormatter.format(options.sokkelPerSchool)} wordt niet toegekend = ${currencyFormatter.format(options.amount)}`,
+                steps: [
+                    { label: 'Totaal budget', value: currencyFormatter.format(options.totaalBudget) },
+                    { label: 'Aantal scholen', value: formatCount(options.aantalScholen) },
+                    { label: 'Sokkel per school', value: currencyFormatter.format(options.sokkelPerSchool) },
+                    { label: 'Nodig voor alle sokkels', value: currencyFormatter.format(options.totaalSokkelBudget) },
+                    { label: 'Past binnen budget', value: options.kanSokkelUitkeren ? 'Ja' : 'Nee' },
+                    { label: 'Resultaat', value: currencyFormatter.format(options.amount) }
+                ],
+                note: ''
+            };
+        }
+
+        function createTotalCalculationDetail(options) {
+            return {
+                title: options.title,
+                school: options.school,
+                amount: options.amount,
+                explanation: options.explanation,
+                formula: options.formula,
+                steps: options.steps,
+                note: options.note || ''
+            };
+        }
+
+        function createColumnTotalCalculationDetail(options) {
+            const formulaBudget = toNumber(options.formulaBudget);
+            const weight = toNumber(options.weight);
+            const rubriekBudget = formulaBudget * (weight / 100);
+            const denominator = toNumber(options.denominator);
+            const denominatorLabel = options.denominatorLabel || 'Totaal aandeel';
+
+            return {
+                title: options.title,
+                school: 'Eindtotaal',
+                amount: options.amount,
+                explanation: options.explanation,
+                formula: denominator > 0
+                    ? `${currencyFormatter.format(formulaBudget)} × ${formatWeight(weight)} = ${currencyFormatter.format(rubriekBudget)}`
+                    : `${currencyFormatter.format(formulaBudget)} × ${formatWeight(weight)} × 0 = ${currencyFormatter.format(options.amount)}`,
+                steps: [
+                    { label: 'Formulebudget', value: currencyFormatter.format(formulaBudget) },
+                    { label: `Gewicht ${options.title}`, value: formatWeight(weight) },
+                    { label: denominatorLabel, value: formatDecimal(denominator, 2) },
+                    { label: `Pot voor ${options.title}`, value: currencyFormatter.format(rubriekBudget) },
+                    { label: 'Uitgekeerd in deze kolom', value: currencyFormatter.format(options.amount) }
+                ],
+                note: denominator > 0 ? '' : `Er is geen totaal voor ${denominatorLabel.toLowerCase()}. Daarom wordt deze kolom op € 0 gezet.`
+            };
         }
 
         function toNonEmptyString(value, fallbackValue) {
@@ -443,7 +765,8 @@
                         vestigingNaam: toNonEmptyString(vestiging?.adres, `Vestiging ${index + 1}`),
                         L: toNumber(vestiging?.leerlingen),
                         M: toNumber(vestiging?.schooleters),
-                        S: toNumber(vestiging?.zwemmers ?? vestiging?.leerlingen),
+                        S: toNumber(vestiging?.zwembad_bezoekers ?? vestiging?.cumulatief_zwembad ?? vestiging?.zwemmers ?? vestiging?.leerlingen),
+                        SI: toNumber(vestiging?.sportinfrastructuur_bezoekers ?? vestiging?.sporthal_bezoekers ?? vestiging?.cumulatief_sportinfrastructuur),
                         C: toNumber(afstanden.cc_min),
                         Z: toNumber(afstanden.zwemmen_min),
                         B: toNumber(afstanden.bib_min)
@@ -565,7 +888,7 @@
                 instellingsnummer: "",
                 schoolNaam: "Nieuwe School",
                 vestigingNaam: "Nieuwe Vestiging",
-                L: 0, M: 0, S: 0, C: 0, Z: 0, B: 0
+                L: 0, M: 0, S: 0, SI: 0, C: 0, Z: 0, B: 0
             });
             renderInputTable();
             calculateAndRender();
@@ -586,10 +909,9 @@
                         vestigingen: [],
                         totaalL: 0,
                         totaalM: 0,
-                        totaalZwemmers: 0,
-                        cultuurWeging: 0,
-                        zwembadWeging: 0,
-                        bibWeging: 0
+                        totaalZwembadBezoekers: 0,
+                        totaalSportinfrastructuurBezoekers: 0,
+                        afstandWeging: 0
                     });
                 }
 
@@ -597,10 +919,9 @@
                 school.vestigingen.push(vestiging);
                 school.totaalL += vestiging.L;
                 school.totaalM += vestiging.M;
-                school.totaalZwemmers += toNumber(vestiging.S ?? vestiging.L);
-                school.cultuurWeging += vestiging.L * vestiging.C;
-                school.zwembadWeging += vestiging.L * vestiging.Z;
-                school.bibWeging += vestiging.L * vestiging.B;
+                school.totaalZwembadBezoekers += toNumber(vestiging.S ?? vestiging.L);
+                school.totaalSportinfrastructuurBezoekers += toNumber(vestiging.SI);
+                school.afstandWeging += vestiging.L * (toNumber(vestiging.C) + toNumber(vestiging.Z) + toNumber(vestiging.B));
             });
 
             return Array.from(groepen.values());
@@ -622,6 +943,7 @@
                         <td class="px-3 py-2"><input type="number" class="table-input w-20 ml-auto" data-idx="${index}" data-field="L" value="${toNumber(vestiging.L)}" min="0"></td>
                         <td class="px-3 py-2"><input type="number" class="table-input w-20 ml-auto" data-idx="${index}" data-field="M" value="${toNumber(vestiging.M)}" min="0"></td>
                         <td class="px-3 py-2"><input type="number" class="table-input w-20 ml-auto" data-idx="${index}" data-field="S" value="${toNumber(vestiging.S ?? vestiging.L)}" min="0"></td>
+                        <td class="px-3 py-2"><input type="number" class="table-input w-20 ml-auto" data-idx="${index}" data-field="SI" value="${toNumber(vestiging.SI)}" min="0"></td>
                         <td class="px-3 py-2"><input type="number" class="table-input w-20 ml-auto" data-idx="${index}" data-field="C" value="${toNumber(vestiging.C)}" min="0" step="0.1"></td>
                         <td class="px-3 py-2"><input type="number" class="table-input w-20 ml-auto" data-idx="${index}" data-field="Z" value="${toNumber(vestiging.Z)}" min="0" step="0.1"></td>
                         <td class="px-3 py-2"><input type="number" class="table-input w-20 ml-auto" data-idx="${index}" data-field="B" value="${toNumber(vestiging.B)}" min="0" step="0.1"></td>
@@ -645,6 +967,7 @@
                         <td class="px-3 py-2 text-right whitespace-nowrap">${formatCount(vestiging.L)}</td>
                         <td class="px-3 py-2 text-right whitespace-nowrap">${formatCount(vestiging.M)}</td>
                         <td class="px-3 py-2 text-right whitespace-nowrap">${formatCount(vestiging.S ?? vestiging.L)}</td>
+                        <td class="px-3 py-2 text-right whitespace-nowrap">${formatCount(vestiging.SI)}</td>
                         <td class="px-3 py-2 text-right whitespace-nowrap">${formatDistance(vestiging.C)}</td>
                         <td class="px-3 py-2 text-right whitespace-nowrap">${formatDistance(vestiging.Z)}</td>
                         <td class="px-3 py-2 text-right whitespace-nowrap">${formatDistance(vestiging.B)}</td>
@@ -682,13 +1005,12 @@
             
             const wBasis = parseFloat(document.getElementById('weight-basis').value) || 0;
             const wMiddag = parseFloat(document.getElementById('weight-middag').value) || 0;
-            const wZwemmers = parseFloat(document.getElementById('weight-zwemmers').value) || 0;
-            const wCultuur = parseFloat(document.getElementById('weight-cultuur').value) || 0;
-            const wZwembad = parseFloat(document.getElementById('weight-zwembad').value) || 0;
-            const wBib = parseFloat(document.getElementById('weight-bib').value) || 0;
+            const wZwembadBezoek = parseFloat(document.getElementById('weight-zwembadbezoek').value) || 0;
+            const wSporthalBezoek = parseFloat(document.getElementById('weight-sporthalbezoek').value) || 0;
+            const wAfstanden = parseFloat(document.getElementById('weight-afstanden').value) || 0;
             const wAndere = parseFloat(document.getElementById('weight-andere').value) || 0;
 
-            const totalWeight = wBasis + wMiddag + wZwemmers + wCultuur + wZwembad + wBib + wAndere;
+            const totalWeight = wBasis + wMiddag + wZwembadBezoek + wSporthalBezoek + wAfstanden + wAndere;
             
             // Toon waarschuwing als percentages geen 100 zijn
             const warningEl = document.getElementById('weight-warning');
@@ -713,44 +1035,51 @@
             // C. Bereken de Totale Sommen van alle scholen (dit zijn de noemers in de breuken)
             let somLln = 0;
             let somMiddag = 0;
-            let somZwemmers = 0;
-            let somCultuurWeging = 0; // Lln * Afstand
-            let somZwembadWeging = 0; // Lln * Afstand
-            let somBibWeging = 0;     // Lln * Afstand
+            let somZwembadBezoekers = 0;
+            let somSporthalBezoekers = 0;
+            let somAfstandWeging = 0; // Lln * som van de relevante afstanden
 
             schoolAggregaten.forEach(school => {
                 somLln += school.totaalL;
                 somMiddag += school.totaalM;
-                somZwemmers += school.totaalZwemmers;
-                somCultuurWeging += school.cultuurWeging;
-                somZwembadWeging += school.zwembadWeging;
-                somBibWeging += school.bibWeging;
+                somZwembadBezoekers += school.totaalZwembadBezoekers;
+                somSporthalBezoekers += school.totaalSportinfrastructuurBezoekers;
+                somAfstandWeging += school.afstandWeging;
             });
 
             let totaalVestigingenLln = 0;
             let totaalVestigingenMiddag = 0;
-            let totaalVestigingenZwemmers = 0;
+            let totaalVestigingenZwembadBezoekers = 0;
+            let totaalVestigingenSportinfrastructuurBezoekers = 0;
             vestigingenData.forEach(vestiging => {
                 totaalVestigingenLln += vestiging.L;
                 totaalVestigingenMiddag += vestiging.M;
-                totaalVestigingenZwemmers += toNumber(vestiging.S ?? vestiging.L);
+                totaalVestigingenZwembadBezoekers += toNumber(vestiging.S ?? vestiging.L);
+                totaalVestigingenSportinfrastructuurBezoekers += toNumber(vestiging.SI);
             });
 
             // Update de totalen in de input tabel
-            document.getElementById('tot-lln').innerText = totaalVestigingenLln;
-            document.getElementById('tot-mid').innerText = totaalVestigingenMiddag;
-            document.getElementById('tot-zwem').innerText = totaalVestigingenZwemmers;
+            document.getElementById('tot-lln').innerText = formatCount(totaalVestigingenLln);
+            document.getElementById('tot-mid').innerText = formatCount(totaalVestigingenMiddag);
+            document.getElementById('tot-zwem').innerText = formatCount(totaalVestigingenZwembadBezoekers);
+            document.getElementById('tot-sporthal').innerText = formatCount(totaalVestigingenSportinfrastructuurBezoekers);
+
+            const summaryZwembadEl = document.getElementById('summary-zwembad-bezoekers');
+            const summarySporthalEl = document.getElementById('summary-sporthal-bezoekers');
+            if (summaryZwembadEl) summaryZwembadEl.innerText = formatCount(totaalVestigingenZwembadBezoekers);
+            if (summarySporthalEl) summarySporthalEl.innerText = formatCount(totaalVestigingenSportinfrastructuurBezoekers);
 
             // D. Bereken de subsidies per school
             const resultsBody = document.getElementById('results-body');
             resultsBody.innerHTML = '';
 
             // Totalen voor de footer initialiseren
-            let resTotSokkel = 0, resTotBasis = 0, resTotMiddag = 0, resTotZwemmers = 0;
-            let resTotCultuur = 0, resTotZwembad = 0, resTotBib = 0;
+            let resTotSokkel = 0, resTotBasis = 0, resTotMiddag = 0, resTotZwembadBezoek = 0, resTotSporthalBezoek = 0;
+            let resTotAfstanden = 0;
             let resTotAndere = 0, resTotAlles = 0;
+            const nextCalculationDetails = {};
 
-            schoolAggregaten.forEach(school => {
+            schoolAggregaten.forEach((school, schoolIndex) => {
                 // Bereken elk deelbedrag. 
                 // Formule = (Te Verdelen Budget) * (Percentage van pot) * (Eigen aandeel / Totaal aandeel)
                 // Let op: Deel door nul vermijden (als bv niemand middagtoezicht heeft)
@@ -759,52 +1088,264 @@
                 
                 const subBasis = somLln > 0 ? FormuleBudget * (wBasis/100) * (school.totaalL / somLln) : 0;
                 const subMiddag = somMiddag > 0 ? FormuleBudget * (wMiddag/100) * (school.totaalM / somMiddag) : 0;
-                const subZwemmers = somZwemmers > 0 ? FormuleBudget * (wZwemmers/100) * (school.totaalZwemmers / somZwemmers) : 0;
-                const subCultuur = somCultuurWeging > 0 ? FormuleBudget * (wCultuur/100) * (school.cultuurWeging / somCultuurWeging) : 0;
-                const subZwembad = somZwembadWeging > 0 ? FormuleBudget * (wZwembad/100) * (school.zwembadWeging / somZwembadWeging) : 0;
-                const subBib = somBibWeging > 0 ? FormuleBudget * (wBib/100) * (school.bibWeging / somBibWeging) : 0;
+                const subZwembadBezoek = somZwembadBezoekers > 0 ? FormuleBudget * (wZwembadBezoek/100) * (school.totaalZwembadBezoekers / somZwembadBezoekers) : 0;
+                const subSporthalBezoek = somSporthalBezoekers > 0 ? FormuleBudget * (wSporthalBezoek/100) * (school.totaalSportinfrastructuurBezoekers / somSporthalBezoekers) : 0;
+                const subAfstanden = somAfstandWeging > 0 ? FormuleBudget * (wAfstanden/100) * (school.afstandWeging / somAfstandWeging) : 0;
                 const subAndere = somLln > 0 ? FormuleBudget * (wAndere/100) * (school.totaalL / somLln) : 0; // Zelfde verdeelsleutel als basis
 
-                const subTotaal = subSokkel + subBasis + subMiddag + subCultuur + subZwembad + subZwemmers + subBib + subAndere;
-                const instellingsLabel = school.instellingsnummer || 'niet ingevuld';
+                const subTotaal = subSokkel + subBasis + subMiddag + subZwembadBezoek + subSporthalBezoek + subAfstanden + subAndere;
+                const schoolNaamLabel = escapeHtml(school.schoolNaam);
+                const instellingsLabel = escapeHtml(school.instellingsnummer || 'niet ingevuld');
+                const bezoekLabel = `Zwembadbezoek: ${formatCount(school.totaalZwembadBezoekers)} | Sporthalbezoek: ${formatCount(school.totaalSportinfrastructuurBezoekers)}`;
                 const vestigingenLabel = school.vestigingen.length > 1 ? `<div class="text-xs text-slate-500">${school.vestigingen.length} vestigingen</div>` : '';
+                const detailSchoolLabel = `${school.schoolNaam} - instellingsnummer ${school.instellingsnummer || 'niet ingevuld'}`;
+                const keyPrefix = `school-${schoolIndex}`;
+                const detailKeys = {
+                    sokkel: `${keyPrefix}-sokkel`,
+                    basis: `${keyPrefix}-basis`,
+                    middag: `${keyPrefix}-middag`,
+                    zwembadbezoek: `${keyPrefix}-zwembadbezoek`,
+                    sporthalbezoek: `${keyPrefix}-sporthalbezoek`,
+                    afstanden: `${keyPrefix}-afstanden`,
+                    andere: `${keyPrefix}-andere`,
+                    totaal: `${keyPrefix}-totaal`
+                };
+
+                nextCalculationDetails[detailKeys.sokkel] = createSokkelCalculationDetail({
+                    school: detailSchoolLabel,
+                    amount: subSokkel,
+                    totaalBudget: TotaalBudget,
+                    sokkelPerSchool: SokkelPerSchool,
+                    aantalScholen: AantalScholen,
+                    totaalSokkelBudget: TotaalSokkelBudget,
+                    kanSokkelUitkeren
+                });
+                nextCalculationDetails[detailKeys.basis] = createShareCalculationDetail({
+                    title: 'Basis (Lln)',
+                    school: detailSchoolLabel,
+                    amount: subBasis,
+                    formulaBudget: FormuleBudget,
+                    weight: wBasis,
+                    own: school.totaalL,
+                    total: somLln,
+                    ownLabel: 'Leerlingen deze school',
+                    totalLabel: 'Leerlingen alle scholen',
+                    explanation: 'Voor basisfinanciering telt het leerlingenaantal. Eerst wordt de basispot bepaald via het gewicht. Daarna krijgt deze school haar aandeel in die pot volgens haar aandeel in alle leerlingen.'
+                });
+                nextCalculationDetails[detailKeys.middag] = createShareCalculationDetail({
+                    title: 'Middag',
+                    school: detailSchoolLabel,
+                    amount: subMiddag,
+                    formulaBudget: FormuleBudget,
+                    weight: wMiddag,
+                    own: school.totaalM,
+                    total: somMiddag,
+                    ownLabel: 'Middag-leerlingen deze school',
+                    totalLabel: 'Middag-leerlingen alle scholen',
+                    explanation: 'Voor middagtoezicht wordt gekeken naar het aantal leerlingen dat op school eet. Een school met een groter aandeel etende leerlingen krijgt een groter aandeel van deze pot.'
+                });
+                nextCalculationDetails[detailKeys.zwembadbezoek] = createShareCalculationDetail({
+                    title: 'Zwembadbezoek',
+                    school: detailSchoolLabel,
+                    amount: subZwembadBezoek,
+                    formulaBudget: FormuleBudget,
+                    weight: wZwembadBezoek,
+                    own: school.totaalZwembadBezoekers,
+                    total: somZwembadBezoekers,
+                    ownLabel: 'Zwembadbezoeken deze school',
+                    totalLabel: 'Zwembadbezoeken alle scholen',
+                    explanation: 'Voor zwembadbezoek telt het cumulatieve aantal bezoeken. De school krijgt dus niet alleen iets omdat ze gaat zwemmen, maar volgens hoeveel bezoeken zij vertegenwoordigt in het totaal.'
+                });
+                nextCalculationDetails[detailKeys.sporthalbezoek] = createShareCalculationDetail({
+                    title: 'Sporthalbezoek',
+                    school: detailSchoolLabel,
+                    amount: subSporthalBezoek,
+                    formulaBudget: FormuleBudget,
+                    weight: wSporthalBezoek,
+                    own: school.totaalSportinfrastructuurBezoekers,
+                    total: somSporthalBezoekers,
+                    ownLabel: 'Sporthalbezoeken deze school',
+                    totalLabel: 'Sporthalbezoeken alle scholen',
+                    explanation: 'Voor sporthalbezoek telt het cumulatieve aantal bezoeken aan de sportinfrastructuur. De school krijgt haar aandeel van deze pot volgens haar aandeel in alle sporthalbezoeken.'
+                });
+                nextCalculationDetails[detailKeys.afstanden] = createShareCalculationDetail({
+                    title: 'Afstanden',
+                    school: detailSchoolLabel,
+                    amount: subAfstanden,
+                    formulaBudget: FormuleBudget,
+                    weight: wAfstanden,
+                    own: school.afstandWeging,
+                    total: somAfstandWeging,
+                    ownLabel: 'Afstandsscore deze school',
+                    totalLabel: 'Afstandsscore alle scholen',
+                    unit: 'punten',
+                    explanation: 'Voor afstanden gebruiken we één gezamenlijke score voor cultuur, zwembad en bib. Per vestiging is dat: leerlingen × (afstand cultuur + afstand zwembad + afstand bib). Hoe hoger die score, hoe groter het aandeel in de afstandspot.'
+                });
+                nextCalculationDetails[detailKeys.andere] = createShareCalculationDetail({
+                    title: 'Andere',
+                    school: detailSchoolLabel,
+                    amount: subAndere,
+                    formulaBudget: FormuleBudget,
+                    weight: wAndere,
+                    own: school.totaalL,
+                    total: somLln,
+                    ownLabel: 'Leerlingen deze school',
+                    totalLabel: 'Leerlingen alle scholen',
+                    explanation: 'De rubriek Andere gebruikt dezelfde verdeelsleutel als Basis: het relatieve leerlingenaantal. Zo wordt deze vrije ruimte proportioneel verdeeld volgens schoolgrootte.'
+                });
+                nextCalculationDetails[detailKeys.totaal] = createTotalCalculationDetail({
+                    title: 'Totaal per school',
+                    school: detailSchoolLabel,
+                    amount: subTotaal,
+                    explanation: 'Dit is de som van alle deelbedragen voor deze school. Elk deelbedrag gebruikt zijn eigen verdeelsleutel, daarna worden ze bij elkaar opgeteld.',
+                    formula: `${currencyFormatter.format(subSokkel)} + ${currencyFormatter.format(subBasis)} + ${currencyFormatter.format(subMiddag)} + ${currencyFormatter.format(subZwembadBezoek)} + ${currencyFormatter.format(subSporthalBezoek)} + ${currencyFormatter.format(subAfstanden)} + ${currencyFormatter.format(subAndere)} = ${currencyFormatter.format(subTotaal)}`,
+                    steps: [
+                        { label: 'Sokkelbedrag', value: currencyFormatter.format(subSokkel) },
+                        { label: 'Basis (Lln)', value: currencyFormatter.format(subBasis) },
+                        { label: 'Middag', value: currencyFormatter.format(subMiddag) },
+                        { label: 'Zwembadbezoek', value: currencyFormatter.format(subZwembadBezoek) },
+                        { label: 'Sporthalbezoek', value: currencyFormatter.format(subSporthalBezoek) },
+                        { label: 'Afstanden', value: currencyFormatter.format(subAfstanden) },
+                        { label: 'Andere', value: currencyFormatter.format(subAndere) },
+                        { label: 'Totaal', value: currencyFormatter.format(subTotaal) }
+                    ],
+                    note: totalWeight === 100 ? '' : `Let op: de percentages tellen samen op tot ${formatWeight(totalWeight)}. Daardoor kan het eindtotaal afwijken van het ingegeven budget.`
+                });
 
                 // Tellen voor de footer
-                resTotSokkel += subSokkel; resTotBasis += subBasis; resTotMiddag += subMiddag; resTotZwemmers += subZwemmers;
-                resTotCultuur += subCultuur; resTotZwembad += subZwembad; resTotBib += subBib;
+                resTotSokkel += subSokkel; resTotBasis += subBasis; resTotMiddag += subMiddag; resTotZwembadBezoek += subZwembadBezoek;
+                resTotSporthalBezoek += subSporthalBezoek;
+                resTotAfstanden += subAfstanden;
                 resTotAndere += subAndere; resTotAlles += subTotaal;
 
                 // Voeg de rij toe aan de HTML
                 const tr = document.createElement('tr');
                 tr.innerHTML = `
                     <td class="px-3 py-2 text-gray-900">
-                        <div class="font-medium">${school.schoolNaam}</div>
+                        <div class="font-medium">${schoolNaamLabel}</div>
                         <div class="text-xs text-slate-500">Instellingsnummer: ${instellingsLabel}</div>
+                        <div class="text-xs text-slate-500">${bezoekLabel}</div>
                         ${vestigingenLabel}
                     </td>
-                    <td class="px-3 py-2 text-right text-slate-500">${currencyFormatter.format(subSokkel)}</td>
-                    <td class="px-3 py-2 text-right">${currencyFormatter.format(subBasis)}</td>
-                    <td class="px-3 py-2 text-right">${currencyFormatter.format(subMiddag)}</td>
-                    <td class="px-3 py-2 text-right">${currencyFormatter.format(subCultuur)}</td>
-                    <td class="px-3 py-2 text-right">${currencyFormatter.format(subZwembad)}</td>
-                    <td class="px-3 py-2 text-right">${currencyFormatter.format(subZwemmers)}</td>
-                    <td class="px-3 py-2 text-right">${currencyFormatter.format(subBib)}</td>
-                    <td class="px-3 py-2 text-right">${currencyFormatter.format(subAndere)}</td>
-                    <td class="px-3 py-2 text-right font-bold text-slate-800 bg-yellow-50">${currencyFormatter.format(subTotaal)}</td>
+                    <td class="px-3 py-2 text-right text-slate-500">${makeAmountButton(detailKeys.sokkel, subSokkel)}</td>
+                    <td class="px-3 py-2 text-right">${makeAmountButton(detailKeys.basis, subBasis)}</td>
+                    <td class="px-3 py-2 text-right">${makeAmountButton(detailKeys.middag, subMiddag)}</td>
+                    <td class="px-3 py-2 text-right">${makeAmountButton(detailKeys.zwembadbezoek, subZwembadBezoek)}</td>
+                    <td class="px-3 py-2 text-right">${makeAmountButton(detailKeys.sporthalbezoek, subSporthalBezoek)}</td>
+                    <td class="px-3 py-2 text-right">${makeAmountButton(detailKeys.afstanden, subAfstanden)}</td>
+                    <td class="px-3 py-2 text-right">${makeAmountButton(detailKeys.andere, subAndere)}</td>
+                    <td class="px-3 py-2 text-right font-bold text-slate-800 bg-yellow-50">${makeAmountButton(detailKeys.totaal, subTotaal, 'font-bold')}</td>
                 `;
                 resultsBody.appendChild(tr);
             });
 
             // Update footer van de resultaten
-            document.getElementById('res-tot-sokkel').innerText = currencyFormatter.format(resTotSokkel);
-            document.getElementById('res-tot-basis').innerText = currencyFormatter.format(resTotBasis);
-            document.getElementById('res-tot-middag').innerText = currencyFormatter.format(resTotMiddag);
-            document.getElementById('res-tot-cultuur').innerText = currencyFormatter.format(resTotCultuur);
-            document.getElementById('res-tot-zwembad').innerText = currencyFormatter.format(resTotZwembad);
-            document.getElementById('res-tot-zwemmers').innerText = currencyFormatter.format(resTotZwemmers);
-            document.getElementById('res-tot-bib').innerText = currencyFormatter.format(resTotBib);
-            document.getElementById('res-tot-andere').innerText = currencyFormatter.format(resTotAndere);
-            document.getElementById('res-tot-alles').innerText = currencyFormatter.format(resTotAlles);
+            nextCalculationDetails['total-sokkel'] = createTotalCalculationDetail({
+                title: 'Totaal sokkelbedragen',
+                school: 'Eindtotaal',
+                amount: resTotSokkel,
+                explanation: 'Dit is de som van alle sokkelbedragen. Het sokkelbedrag wordt één keer per instellingsnummer geteld, niet één keer per vestiging.',
+                formula: kanSokkelUitkeren
+                    ? `${formatCount(AantalScholen)} scholen × ${currencyFormatter.format(SokkelPerSchool)} = ${currencyFormatter.format(resTotSokkel)}`
+                    : `${formatCount(AantalScholen)} scholen × ${currencyFormatter.format(SokkelPerSchool)} past niet binnen het budget = ${currencyFormatter.format(resTotSokkel)}`,
+                steps: [
+                    { label: 'Aantal scholen', value: formatCount(AantalScholen) },
+                    { label: 'Sokkel per school', value: currencyFormatter.format(SokkelPerSchool) },
+                    { label: 'Nodig voor alle sokkels', value: currencyFormatter.format(TotaalSokkelBudget) },
+                    { label: 'Totaal budget', value: currencyFormatter.format(TotaalBudget) },
+                    { label: 'Uitgekeerd in deze kolom', value: currencyFormatter.format(resTotSokkel) }
+                ],
+                note: kanSokkelUitkeren ? '' : 'Omdat alle sokkels samen hoger zijn dan het budget, worden de sokkels in dit model niet uitgekeerd.'
+            });
+            nextCalculationDetails['total-basis'] = createColumnTotalCalculationDetail({
+                title: 'Basis (Lln)',
+                amount: resTotBasis,
+                formulaBudget: FormuleBudget,
+                weight: wBasis,
+                denominator: somLln,
+                denominatorLabel: 'Leerlingen alle scholen',
+                explanation: 'Dit is de volledige basispot die over alle scholen verdeeld werd volgens leerlingenaantal.'
+            });
+            nextCalculationDetails['total-middag'] = createColumnTotalCalculationDetail({
+                title: 'Middag',
+                amount: resTotMiddag,
+                formulaBudget: FormuleBudget,
+                weight: wMiddag,
+                denominator: somMiddag,
+                denominatorLabel: 'Middag-leerlingen alle scholen',
+                explanation: 'Dit is de volledige middagpot die over alle scholen verdeeld werd volgens het aantal leerlingen dat op school eet.'
+            });
+            nextCalculationDetails['total-zwembadbezoek'] = createColumnTotalCalculationDetail({
+                title: 'Zwembadbezoek',
+                amount: resTotZwembadBezoek,
+                formulaBudget: FormuleBudget,
+                weight: wZwembadBezoek,
+                denominator: somZwembadBezoekers,
+                denominatorLabel: 'Zwembadbezoeken alle scholen',
+                explanation: 'Dit is de volledige pot voor zwembadbezoek die over alle scholen verdeeld werd volgens het cumulatieve aantal zwembadbezoeken.'
+            });
+            nextCalculationDetails['total-sporthalbezoek'] = createColumnTotalCalculationDetail({
+                title: 'Sporthalbezoek',
+                amount: resTotSporthalBezoek,
+                formulaBudget: FormuleBudget,
+                weight: wSporthalBezoek,
+                denominator: somSporthalBezoekers,
+                denominatorLabel: 'Sporthalbezoeken alle scholen',
+                explanation: 'Dit is de volledige pot voor sporthalbezoek die over alle scholen verdeeld werd volgens het cumulatieve aantal bezoeken aan de sportinfrastructuur.'
+            });
+            nextCalculationDetails['total-afstanden'] = createColumnTotalCalculationDetail({
+                title: 'Afstanden',
+                amount: resTotAfstanden,
+                formulaBudget: FormuleBudget,
+                weight: wAfstanden,
+                denominator: somAfstandWeging,
+                denominatorLabel: 'Afstandsscore alle scholen',
+                explanation: 'Dit is de volledige afstandspot die over alle scholen verdeeld werd volgens de gezamenlijke afstandsscore voor cultuur, zwembad en bib.'
+            });
+            nextCalculationDetails['total-andere'] = createColumnTotalCalculationDetail({
+                title: 'Andere',
+                amount: resTotAndere,
+                formulaBudget: FormuleBudget,
+                weight: wAndere,
+                denominator: somLln,
+                denominatorLabel: 'Leerlingen alle scholen',
+                explanation: 'Dit is de volledige pot voor Andere die over alle scholen verdeeld werd volgens hetzelfde leerlingenaandeel als Basis.'
+            });
+            nextCalculationDetails['total-alles'] = createTotalCalculationDetail({
+                title: 'Eindtotaal',
+                school: 'Alle scholen',
+                amount: resTotAlles,
+                explanation: 'Dit is de som van alle kolommen in de resultatentabel. Het eindtotaal bestaat uit sokkels plus alle procentueel verdeelde rubrieken.',
+                formula: `${currencyFormatter.format(resTotSokkel)} + ${currencyFormatter.format(resTotBasis)} + ${currencyFormatter.format(resTotMiddag)} + ${currencyFormatter.format(resTotZwembadBezoek)} + ${currencyFormatter.format(resTotSporthalBezoek)} + ${currencyFormatter.format(resTotAfstanden)} + ${currencyFormatter.format(resTotAndere)} = ${currencyFormatter.format(resTotAlles)}`,
+                steps: [
+                    { label: 'Sokkelbedragen', value: currencyFormatter.format(resTotSokkel) },
+                    { label: 'Basis (Lln)', value: currencyFormatter.format(resTotBasis) },
+                    { label: 'Middag', value: currencyFormatter.format(resTotMiddag) },
+                    { label: 'Zwembadbezoek', value: currencyFormatter.format(resTotZwembadBezoek) },
+                    { label: 'Sporthalbezoek', value: currencyFormatter.format(resTotSporthalBezoek) },
+                    { label: 'Afstanden', value: currencyFormatter.format(resTotAfstanden) },
+                    { label: 'Andere', value: currencyFormatter.format(resTotAndere) },
+                    { label: 'Eindtotaal', value: currencyFormatter.format(resTotAlles) }
+                ],
+                note: totalWeight === 100 ? '' : `Let op: de percentages tellen samen op tot ${formatWeight(totalWeight)}. Daardoor kan het eindtotaal afwijken van het ingegeven budget.`
+            });
+
+            document.getElementById('res-tot-sokkel').innerHTML = makeAmountButton('total-sokkel', resTotSokkel, 'font-bold');
+            document.getElementById('res-tot-basis').innerHTML = makeAmountButton('total-basis', resTotBasis, 'font-bold');
+            document.getElementById('res-tot-middag').innerHTML = makeAmountButton('total-middag', resTotMiddag, 'font-bold');
+            document.getElementById('res-tot-zwembadbezoek').innerHTML = makeAmountButton('total-zwembadbezoek', resTotZwembadBezoek, 'font-bold');
+            document.getElementById('res-tot-sporthalbezoek').innerHTML = makeAmountButton('total-sporthalbezoek', resTotSporthalBezoek, 'font-bold');
+            document.getElementById('res-tot-afstanden').innerHTML = makeAmountButton('total-afstanden', resTotAfstanden, 'font-bold');
+            document.getElementById('res-tot-andere').innerHTML = makeAmountButton('total-andere', resTotAndere, 'font-bold');
+            document.getElementById('res-tot-alles').innerHTML = makeAmountButton('total-alles', resTotAlles, 'font-bold');
+
+            calculationDetails = nextCalculationDetails;
+            if (activeCalculationKey && calculationDetails[activeCalculationKey]) {
+                renderCalculationPanel(calculationDetails[activeCalculationKey]);
+            } else if (activeCalculationKey) {
+                closeCalculationPanel();
+            }
+            markActiveCalculationButton();
         }
 
         // 4. OPSTARTEN
@@ -812,6 +1353,18 @@
         const paramInputs = document.querySelectorAll('#param-budget, #param-sokkel, .weight-input');
         paramInputs.forEach(input => {
             input.addEventListener('input', calculateAndRender);
+        });
+
+        document.addEventListener('click', (event) => {
+            const button = event.target.closest('[data-calculation-key]');
+            if (!button) return;
+            showCalculationDetail(button.getAttribute('data-calculation-key'));
+        });
+
+        document.addEventListener('keydown', (event) => {
+            if (event.key === 'Escape') {
+                closeCalculationPanel();
+            }
         });
 
         // Eerste keer inladen met lokale fallback, daarna endpoint ophalen
