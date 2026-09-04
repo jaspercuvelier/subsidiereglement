@@ -2,11 +2,13 @@
  * GOOGLE APPS SCRIPT: brongegevens subsidiereglement Stad Tielt
  * ==============================================================
  *
- * Dit script hangt aan de Google Sheet en doet drie dingen:
+ * Dit script hangt aan de Google Sheet en doet vier dingen:
  *
  *   1. doGet()                  publiceert de sheet als JSON voor de rekentool
  *   2. vulAfstandenAan()        berekent ontbrekende afstanden via Google Maps
  *   3. synchroniseerTabbladen() houdt de matrices in lijn met de lijsten
+ *   4. berekenOki()             rekent stap voor stap een OKI-factor uit voor
+ *                               een school die er zelf geen krijgt
  *
  * SHEETSTRUCTUUR
  * --------------
@@ -63,6 +65,7 @@ function onOpen() {
     .addItem('Tabbladen synchroniseren', 'synchroniseerTabbladen')
     .addItem('Ontbrekende afstanden berekenen', 'vulAfstandenAan')
     .addItem('Project toevoegen', 'voegProjectToe')
+    .addItem('OKI berekenen uit leerlingenkenmerken', 'berekenOki')
     .addSeparator()
     .addItem('Eenmalig: migreren van APP_DATA', 'migreerVanAppData')
     .addToUi();
@@ -452,6 +455,170 @@ function maakEuroKolom(naam, kop) {
   var kolom = koppen.indexOf(kop) + 1;
   if (kolom < 1) return;
   sheet.getRange(2, kolom, Math.max(1, sheet.getMaxRows() - 1), 1).setNumberFormat('€#,##0.00');
+}
+
+/* ================================================================== */
+/* OKI berekenen uit de leerlingenkenmerken                            */
+/* ================================================================== */
+
+/**
+ * De kenmerken waaruit de OKI-factor wordt samengesteld, in de volgorde waarin
+ * de wizard ernaar vraagt.
+ *
+ * LET OP: de gewichten hieronder staan allemaal op 1. De uitkomst is dan het
+ * gemiddelde aantal kenmerken per leerling: een school waar elke leerling er
+ * precies één heeft, komt op 1,00 uit. Dat is een verdedigbare en gangbare
+ * definitie, maar het is niet noodzakelijk de wegingsformule die AgODi voor de
+ * officiele OKI hanteert. Krijgt de stad die formule te pakken, dan volstaat
+ * het de gewichten hier aan te passen; de wizard toont ze bij elke stap en in
+ * de eindberekening, zodat altijd zichtbaar is waarmee gerekend is.
+ *
+ * naam     de vraag zoals ze in de wizard verschijnt
+ * gewicht  het gewicht van dit kenmerk in de formule
+ * hulp     korte verduidelijking, zodat wie invult weet wat meetelt
+ */
+var OKI_KENMERKEN = [
+  {
+    naam: 'Opleidingsniveau van de moeder',
+    gewicht: 1,
+    hulp: 'De moeder is niet in het bezit van een diploma of getuigschrift van het secundair onderwijs.'
+  },
+  {
+    naam: 'Schooltoeslag',
+    gewicht: 1,
+    hulp: 'De leerling ontving het voorbije schooljaar een schooltoeslag (de vroegere schooltoelage, nu de selectieve participatietoeslag).'
+  },
+  {
+    naam: 'Thuistaal',
+    gewicht: 1,
+    hulp: 'De taal die de leerling thuis spreekt met moeder, vader of broers en zussen is niet het Nederlands.'
+  },
+  {
+    naam: 'Buurt',
+    gewicht: 1,
+    hulp: 'De leerling woont in een buurt met een hoge mate van schoolse vertraging. Weet je dit niet, vul dan 0 in; het kenmerk telt dan gewoon niet mee.'
+  }
+];
+
+/**
+ * Wizard die de OKI-factor uitrekent voor een school die er zelf geen krijgt,
+ * zoals een school voor buitengewoon onderwijs. Ze vraagt stap voor stap het
+ * leerlingenaantal en per kenmerk hoeveel leerlingen eraan voldoen, en toont
+ * op het einde de volledige berekening.
+ *
+ * De uitkomst wordt bewust NIET weggeschreven: het is een hulpmiddel, geen
+ * automatisme. De stad noteert het cijfer zelf in de kolom 'oki' van GEGEVENS,
+ * zodat er altijd een mens tussen de berekening en het reglement staat.
+ */
+function berekenOki() {
+  var ui = SpreadsheetApp.getUi();
+  var aantalStappen = OKI_KENMERKEN.length + 1;
+
+  var start = ui.alert(
+    'OKI berekenen',
+    'Deze wizard rekent de OKI-factor uit voor een school waarvoor geen officieel ' +
+    'OKI-cijfer bestaat, bijvoorbeeld een school voor buitengewoon onderwijs.\n\n' +
+    'Je krijgt ' + aantalStappen + ' vragen: eerst het leerlingenaantal, daarna per ' +
+    'leerlingenkenmerk hoeveel leerlingen eraan voldoen. Telkens een aantal ' +
+    'leerlingen dus, geen percentage. Een leerling mag in meerdere kenmerken ' +
+    'meegeteld worden.\n\n' +
+    'Op het einde zie je de volledige berekening. Het cijfer wordt niet ' +
+    'automatisch weggeschreven: je typt het zelf in de kolom "oki" van het ' +
+    'tabblad ' + TAB_GEGEVENS + '.\n\n' +
+    'Doorgaan?',
+    ui.ButtonSet.OK_CANCEL);
+  if (start !== ui.Button.OK) return;
+
+  var lln = vraagGeheelGetal(ui,
+    'Stap 1 van ' + aantalStappen + ': leerlingen',
+    'Hoeveel leerlingen telt de school op de teldatum?',
+    1, null);
+  if (lln === null) return;
+
+  var metingen = [];
+  for (var i = 0; i < OKI_KENMERKEN.length; i++) {
+    var kenmerk = OKI_KENMERKEN[i];
+    var aantal = vraagGeheelGetal(ui,
+      'Stap ' + (i + 2) + ' van ' + aantalStappen + ': ' + kenmerk.naam,
+      kenmerk.hulp + '\n\n' +
+      'Hoeveel van de ' + lln + ' leerlingen voldoen hieraan?\n' +
+      '(gewicht van dit kenmerk in de formule: ' + formatteerGetal(kenmerk.gewicht, 2) + ')',
+      0, lln);
+    if (aantal === null) return;
+    metingen.push(aantal);
+  }
+
+  ui.alert('OKI-berekening', bouwOkiVerslag(lln, metingen), ui.ButtonSet.OK);
+}
+
+/**
+ * Zet de ingevulde aantallen om in een leesbare berekening: per kenmerk het
+ * aandeel maal het gewicht, en onderaan de som. Wie de uitkomst achteraf moet
+ * verantwoorden, kan ze zo regel per regel narekenen.
+ */
+function bouwOkiVerslag(lln, metingen) {
+  var regels = ['Aantal leerlingen: ' + lln, ''];
+  var oki = 0;
+
+  OKI_KENMERKEN.forEach(function (kenmerk, i) {
+    var aandeel = metingen[i] / lln;
+    var bijdrage = aandeel * kenmerk.gewicht;
+    oki += bijdrage;
+    regels.push(kenmerk.naam);
+    regels.push('   ' + metingen[i] + ' / ' + lln + ' = ' + formatteerGetal(aandeel, 3) +
+                '  ×  gewicht ' + formatteerGetal(kenmerk.gewicht, 2) +
+                '  =  ' + formatteerGetal(bijdrage, 3));
+  });
+
+  regels.push('');
+  regels.push('OKI = ' + OKI_KENMERKEN.map(function (kenmerk, i) {
+    return formatteerGetal((metingen[i] / lln) * kenmerk.gewicht, 3);
+  }).join(' + ') + ' = ' + formatteerGetal(oki, 2));
+  regels.push('');
+  regels.push('Noteer ' + formatteerGetal(oki, 2) + ' in de kolom "oki" van het tabblad ' +
+              TAB_GEGEVENS + ', op de rij van deze school.');
+  regels.push('');
+  regels.push('Ter vergelijking: bij deze gewichten betekent 1,00 dat elke leerling ' +
+              'gemiddeld aan één kenmerk voldoet. Controleer of dat op dezelfde schaal ' +
+              'staat als de officiële OKI-cijfers van de andere scholen; staat het dat ' +
+              'niet, dan worden in luik 3 twee schalen door elkaar gebruikt.');
+
+  return regels.join('\n');
+}
+
+/**
+ * Vraagt een geheel getal en blijft vragen tot het klopt of tot de gebruiker
+ * annuleert. `maximum` mag null zijn. Geeft null terug bij annuleren.
+ */
+function vraagGeheelGetal(ui, titel, vraag, minimum, maximum) {
+  var toelichting = '';
+
+  while (true) {
+    var antwoord = ui.prompt(titel, toelichting + vraag, ui.ButtonSet.OK_CANCEL);
+    if (antwoord.getSelectedButton() !== ui.Button.OK) return null;
+
+    // Belgische invoer: een komma als decimaalteken laten we door, punten in
+    // duizendtallen ("1.250") niet: die zijn niet van een decimaal te
+    // onderscheiden en horen hier toch niet thuis.
+    var ruw = tekst(antwoord.getResponseText()).replace(',', '.');
+    var getal = ruw === '' ? NaN : Number(ruw);
+
+    if (!isFinite(getal) || getal !== Math.round(getal)) {
+      toelichting = '"' + tekst(antwoord.getResponseText()) + '" is geen geheel getal.\n\n';
+    } else if (getal < minimum) {
+      toelichting = 'Het antwoord moet minstens ' + minimum + ' zijn.\n\n';
+    } else if (maximum !== null && getal > maximum) {
+      toelichting = 'Het antwoord kan niet groter zijn dan ' + maximum + '. ' +
+                    'Vul een aantal leerlingen in, geen percentage.\n\n';
+    } else {
+      return getal;
+    }
+  }
+}
+
+/** Getal als tekst, met de komma als decimaalteken. */
+function formatteerGetal(getal, decimalen) {
+  return getal.toFixed(decimalen).replace('.', ',');
 }
 
 /* ================================================================== */

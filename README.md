@@ -127,11 +127,52 @@ In de sheet, in deze volgorde:
 2. *Subsidietool → Ontbrekende afstanden berekenen*. Dat vult enkel lege cellen,
    dus handmatige correcties blijven staan.
 3. `BEZOEKEN`: aantallen voor cultuurcentrum, bibliotheek en sporthal.
-4. `GEGEVENS`: `oki`.
+4. `GEGEVENS`: `oki` (zie *Het OKI-cijfer* hieronder).
 5. `META`: een rij `fluofactuur` met het totaalbedrag van de factuur voor de
    fluojasjes.
 
 Na elke stap herlaadt de tool met *Herladen uit sheet*.
+
+## Het OKI-cijfer
+
+De OKI-factor van luik 3 wordt voor de gewone scholen gewoon opgevraagd. Eén
+school in de lijst krijgt er geen: De Vlinder is een school voor buitengewoon
+onderwijs, en daar wordt de indicator niet berekend, omdat het buitengewoon
+onderwijs per type en opleidingsvorm gefinancierd wordt in plaats van via de
+leerlingenkenmerken.
+
+Voor die school berekent de stad het cijfer zelf, met menu *Subsidietool → OKI
+berekenen uit leerlingenkenmerken*. De wizard vraagt eerst het leerlingenaantal
+en daarna per kenmerk hoeveel leerlingen eraan voldoen:
+
+| Kenmerk | Telt mee als |
+|---------|--------------|
+| Opleidingsniveau van de moeder | de moeder heeft geen diploma secundair onderwijs |
+| Schooltoeslag | de leerling ontving een schooltoeslag |
+| Thuistaal | de thuistaal is niet het Nederlands |
+| Buurt | de leerling woont in een buurt met veel schoolse vertraging |
+
+Een leerling mag in meerdere kenmerken meegeteld worden. De uitkomst is de som
+van de aandelen maal hun gewicht; de laatste stap toont die berekening regel per
+regel. De stad neemt het cijfer over in de kolom `oki` van `GEGEVENS`. Er wordt
+niets automatisch weggeschreven: zo staat er altijd een mens tussen de
+berekening en het reglement, en blijft de kolom `oki` één plek met één soort
+cijfer.
+
+De kenmerken en hun gewichten staan in `OKI_KENMERKEN` bovenaan het blok *OKI
+berekenen* in `apps_script.js`. Ze staan nu allemaal op 1, waardoor de uitkomst
+het gemiddelde aantal kenmerken per leerling is: 1,00 betekent dan dat elke
+leerling gemiddeld aan één kenmerk voldoet. Dat is een verdedigbare definitie,
+maar niet noodzakelijk de wegingsformule van AgODi. Raakt de stad aan die
+formule, dan volstaat het de gewichten daar aan te passen; de wizard toont ze
+bij elke stap en in de eindberekening, zodat altijd zichtbaar blijft waarmee
+gerekend is.
+
+Let daarbij op de schaal. Luik 3 verdeelt op `leerlingen × OKI`, dus enkel de
+verhoudingen tellen — maar dan wel de verhoudingen binnen één schaal. Staat het
+berekende cijfer van De Vlinder niet op dezelfde schaal als de opgevraagde
+cijfers van de andere scholen, dan klopt de verdeling niet. De wizard zet die
+waarschuwing ook onder het resultaat.
 
 ## Iets toevoegen of wijzigen
 
@@ -206,7 +247,8 @@ een toekenning gebaseerd was.
 
 - **`oki`**: nergens ingevuld. Luik 3 verdeelt daardoor voorlopig zuiver op
   leerlingenaantal (de tool rekent met OKI = 1,00 voor iedereen). Het OKI-cijfer
-  is telkens dat van twee schooljaren geleden.
+  is telkens dat van twee schooljaren geleden. Voor De Vlinder bestaat er geen;
+  zie *Het OKI-cijfer*.
 - **`fluofactuur`**: nog niet ingevuld in `META`. Zolang dat zo is, schuift de
   volledige €5.000 van luik 1 door naar de projectenpot van luik 2.
 - **Projectfacturen**: er staat nog geen enkel project in `PROJECTEN`. De pot van
