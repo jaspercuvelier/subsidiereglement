@@ -398,8 +398,9 @@ const UI = (function () {
 
   /**
    * Luiken die de stad zelf betaalt staan niet in de tabel hierboven: er gaat
-   * geen euro naar de scholen. Ze krijgen een eigen regel, met wat de factuur
-   * kostte en waar het saldo naartoe gaat.
+   * geen euro naar de scholen. Ze krijgen een eigen blok, met twee balken op
+   * dezelfde schaal: wat er van het gereserveerde bedrag naar de factuur ging,
+   * en hoe het saldo de pot van het volgende luik groter of kleiner maakt.
    */
   function tekenCentraleLuiken() {
     const centraal = resultaat.luiken.filter(r => r.centraal);
@@ -407,19 +408,145 @@ const UI = (function () {
     el('centrale-luiken').innerHTML = centraal.map(r => {
       const sleutel = `kolom::${r.luik.id}`;
       details.set(sleutel, maakKolomDetail(r));
-      const doelLuik = LUIKEN.find(l => l.id === r.overdrachtNaar);
-      const bestemming = !doelLuik ? ''
-        : r.saldo >= 0
-          ? ` Het saldo van ${euro.format(r.saldo)} gaat naar de pot van luik ${doelLuik.nummer} (${esc(doelLuik.naam)}).`
-          : ` Het tekort van ${euro.format(-r.saldo)} wordt afgetrokken van de pot van luik ${doelLuik.nummer} (${esc(doelLuik.naam)}).`;
-
-      return `
-        <div class="rounded-md border ${r.saldo < 0 ? 'border-amber-300 bg-amber-50 text-amber-900' : 'border-slate-200 bg-slate-50 text-slate-700'} p-3 text-sm leading-6">
-          <span class="font-semibold">Luik ${r.luik.nummer}: ${esc(r.luik.naam)}</span> staat niet in de tabel:
-          de stad koopt centraal aan en betaalt de factuur zelf.
-          Gereserveerd ${euro.format(r.budget)}, factuur ${knop(sleutel, r.besteed)}.${bestemming}
-        </div>`;
+      const doel = resultaat.luiken.find(x => !x.centraal && x.luik.id === r.overdrachtNaar);
+      return tekenDoorstroming(r, doel, sleutel);
     }).join('');
+  }
+
+  const STREEP = 'repeating-linear-gradient(45deg, #fda4af 0 6px, #fecdd3 6px 12px)';
+
+  /** Eén segment van een balk; breedte in procent van de balk zelf. */
+  function segment(breedte, opmaak, label) {
+    if (breedte <= 0.05) return '';
+    const stijl = opmaak.streep
+      ? `width:${breedte}%;background-image:${STREEP}`
+      : `width:${breedte}%`;
+    return `<div class="${opmaak.klasse}" style="${stijl}" title="${esc(label)}"></div>`;
+  }
+
+  function stip(opmaak) {
+    return opmaak.streep
+      ? `<span class="inline-block h-3 w-3 shrink-0 rounded-sm align-middle" style="background-image:${STREEP}"></span>`
+      : `<span class="inline-block h-3 w-3 shrink-0 rounded-sm align-middle ${opmaak.klasse}"></span>`;
+  }
+
+  function legende(items) {
+    return `<div class="mt-2 flex flex-wrap gap-x-5 gap-y-1 text-xs text-slate-600">
+      ${items.map(item => `<span class="flex items-center gap-1.5">
+          ${stip(item.opmaak)}<span>${item.label}</span>
+          <span class="font-semibold text-slate-900">${item.waarde}</span>
+        </span>`).join('')}
+    </div>`;
+  }
+
+  function balk(titel, totaalLabel, breedtePercent, segmenten) {
+    return `
+      <div>
+        <div class="flex flex-wrap items-baseline justify-between gap-2 text-xs">
+          <span class="font-semibold text-slate-700">${titel}</span>
+          <span class="text-slate-500">${totaalLabel}</span>
+        </div>
+        <div class="mt-1 flex h-7 overflow-hidden rounded bg-slate-200" style="width:${breedtePercent}%">
+          ${segmenten}
+        </div>
+      </div>`;
+  }
+
+  /**
+   * Beide balken staan op één schaal (euro per pixel), zodat het stuk dat uit
+   * het ene luik verdwijnt even breed is als het stuk dat in het andere luik
+   * bijkomt. Dat is precies wat er te zien moet zijn.
+   */
+  function tekenDoorstroming(r, doel, detailSleutel) {
+    const FACTUUR = { klasse: 'bg-slate-400' };
+    const SALDO = { klasse: 'bg-emerald-400' };
+    const EIGEN = { klasse: 'bg-sky-500' };
+    const TEKORT = { streep: true };
+
+    const tekort = r.saldo < 0;
+    const bron = Math.max(r.budget, r.besteed);
+    const pot = doel ? Math.max(doel.basisbudget, doel.budget) : 0;
+    const schaal = Math.max(bron, pot, 1);
+    const deel = (bedrag, van) => (van > 0 ? (bedrag / van) * 100 : 0);
+
+    const bronSegmenten = tekort
+      ? segment(deel(r.budget, bron), FACTUUR, 'Gereserveerd en opgegaan aan de factuur')
+        + segment(deel(-r.saldo, bron), TEKORT, 'Tekort')
+      : segment(deel(r.besteed, bron), FACTUUR, 'Factuur')
+        + segment(deel(r.saldo, bron), SALDO, 'Saldo, gaat naar het volgende luik');
+
+    const bronBalk = balk(
+      `Luik ${r.luik.nummer} · ${esc(r.luik.naam)}`,
+      tekort
+        ? `${euro.format(r.besteed)} factuur, ${euro.format(r.budget)} gereserveerd`
+        : `${euro.format(r.budget)} gereserveerd`,
+      deel(bron, schaal),
+      bronSegmenten);
+
+    const bronLegende = legende(tekort
+      ? [{ opmaak: FACTUUR, label: 'Factuur (tot het gereserveerde bedrag)', waarde: euro.format(r.budget) },
+         { opmaak: TEKORT, label: 'Tekort bovenop de reservering', waarde: euro.format(-r.saldo) }]
+      : [{ opmaak: FACTUUR, label: 'Factuur fluojasjes', waarde: euro.format(r.besteed) },
+         { opmaak: SALDO, label: 'Blijft over', waarde: euro.format(r.saldo) }]);
+
+    if (!doel) {
+      return `<div class="rounded-lg border border-slate-200 bg-slate-50 p-4">${bronBalk}${bronLegende}</div>`;
+    }
+
+    const doelSegmenten = tekort
+      ? segment(deel(doel.budget, pot), EIGEN, 'Wat er van de pot overblijft')
+        + segment(deel(-doel.overdracht, pot), TEKORT, 'Afgetrokken voor het tekort')
+      : segment(deel(doel.basisbudget, pot), EIGEN, 'Eigen budget van dit luik')
+        + segment(deel(doel.overdracht, pot), SALDO, 'Bijgekomen uit het vorige luik');
+
+    const doelBalk = balk(
+      `Luik ${doel.luik.nummer} · ${esc(doel.luik.naam)}`,
+      `${euro.format(doel.budget)} te verdelen over de scholen`,
+      deel(pot, schaal),
+      doelSegmenten);
+
+    const doelLegende = legende(tekort
+      ? [{ opmaak: EIGEN, label: 'Pot die overblijft', waarde: euro.format(doel.budget) },
+         { opmaak: TEKORT, label: `Afgetrokken voor luik ${r.luik.nummer}`, waarde: euro.format(-doel.overdracht) }]
+      : [{ opmaak: EIGEN, label: 'Eigen budget', waarde: euro.format(doel.basisbudget) },
+         { opmaak: SALDO, label: `Uit luik ${r.luik.nummer}`, waarde: euro.format(doel.overdracht) }]);
+
+    const som = tekort
+      ? `${euro.format(doel.basisbudget)} − ${euro.format(-doel.overdracht)} = ${euro.format(doel.budget)}`
+      : `${euro.format(doel.basisbudget)} + ${euro.format(doel.overdracht)} = ${euro.format(doel.budget)}`;
+
+    return `
+      <div class="rounded-lg border border-slate-200 bg-slate-50 p-4">
+        <div class="flex flex-wrap items-baseline justify-between gap-2">
+          <p class="text-xs font-semibold uppercase tracking-wide text-slate-400">
+            Van luik ${r.luik.nummer} naar luik ${doel.luik.nummer}
+          </p>
+          <button type="button" class="bedrag-knop rounded border-b border-dotted border-slate-400 px-1 text-xs text-slate-500 hover:bg-blue-50 hover:text-blue-700"
+                  data-detail="${esc(detailSleutel)}">de berekening</button>
+        </div>
+        <p class="mt-1 text-sm leading-6 text-slate-600">
+          Luik ${r.luik.nummer} staat niet in de tabel hierboven: de stad koopt centraal aan en betaalt
+          de factuur zelf, er gaat dus geen euro rechtstreeks naar een school.
+          ${tekort
+            ? `De factuur is ${euro.format(-r.saldo)} duurder dan de ${euro.format(r.budget)} die ervoor
+               opzijgezet was, en dat tekort wordt van de pot van luik ${doel.luik.nummer} afgetrokken.`
+            : r.besteed === 0
+              ? `Er is nog geen factuurbedrag ingevuld (rij <code class="rounded bg-white px-1">fluofactuur</code>
+                 in het tabblad META van de sheet), dus schuift voorlopig de volledige
+                 ${euro.format(r.budget)} door naar de pot van luik ${doel.luik.nummer}.`
+              : `Wat er van de ${euro.format(r.budget)} overblijft, ${euro.format(r.saldo)}, gaat naar de pot
+                 van luik ${doel.luik.nummer} en wordt daar mee over de scholen verdeeld.`}
+        </p>
+
+        <div class="mt-4 space-y-4">
+          <div>${bronBalk}${bronLegende}</div>
+          <div>${doelBalk}${doelLegende}</div>
+        </div>
+
+        <p class="mt-4 border-t border-slate-200 pt-3 text-sm text-slate-700">
+          Pot van luik ${doel.luik.nummer}: <span class="font-semibold text-slate-900">${som}</span>
+        </p>
+      </div>`;
   }
 
   /* ---------------------------------------------------------------- */
@@ -438,14 +565,28 @@ const UI = (function () {
     const gesorteerd = resultaat.scholen.slice()
       .sort((a, b) => a.schoolNaam.localeCompare(b.schoolNaam, 'nl'));
 
-    const inleiding = projecten.length === 0
+    // Waar de pot vandaan komt, meteen boven de tabel: het bedrag in de
+    // kolomvoet is niet het budget dat in de configuratie staat.
+    const bron = LUIKEN.find(l => l.overdrachtNaar === r.luik.id);
+    const potHerkomst = !r.overdracht ? '' : `
+      <p class="mx-1 mb-3 text-sm leading-6 text-slate-600">
+        De pot die hier verdeeld wordt is
+        <span class="font-semibold text-slate-900">${euro.format(r.budget)}</span>:
+        ${euro.format(r.basisbudget)} eigen budget
+        ${r.overdracht >= 0
+          ? `plus ${euro.format(r.overdracht)} die overbleef`
+          : `min ${euro.format(-r.overdracht)} tekort`}
+        ${bron ? `van luik ${bron.nummer} (${esc(bron.naam)})` : ''}.
+      </p>`;
+
+    const inleiding = potHerkomst + (projecten.length === 0
       ? `<p class="mx-1 mb-3 rounded-md border border-sky-200 bg-sky-50 p-3 text-sm leading-6 text-sky-900">
            Er zijn nog geen projecten ingegeven. Voeg ze toe in de Google Sheet via
            <em>Subsidietool → Project toevoegen</em>; elk project wordt een kolom waar de stad
            per school het factuurbedrag intypt. Zolang er niets ingevuld is, staat de volledige
            pot van elke school nog open.
          </p>`
-      : '';
+      : '');
 
     const rijen = gesorteerd.map(school => {
       const eigen = r.perSchool[school.sleutel];
