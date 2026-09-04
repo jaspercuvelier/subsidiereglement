@@ -65,9 +65,13 @@ const UI = (function () {
   /* Luiken en instellingen                                           */
   /* ---------------------------------------------------------------- */
 
-  function tekenLuiken() {
+  function werkBudgetTotaalBij() {
     const totaal = LUIKEN.filter(l => l.actief !== false).reduce((t, l) => t + Number(l.budget || 0), 0);
     el('budget-totaal').textContent = euro.format(totaal);
+  }
+
+  function tekenLuiken() {
+    werkBudgetTotaalBij();
 
     el('luiken-config').innerHTML = LUIKEN.map(luik => `
       <div class="rounded-lg border border-slate-200 bg-white p-4 ${luik.actief === false ? 'opacity-50' : ''}">
@@ -871,6 +875,19 @@ const UI = (function () {
   /* Herberekenen                                                     */
   /* ---------------------------------------------------------------- */
 
+  // Het herberekenen en hertekenen stellen we een tel uit: wie een bedrag
+  // intypt, mag niet na elke toetsaanslag op de volledige tool wachten.
+  let herberekenTimer = null;
+
+  function herberekenStraks(naderhand) {
+    clearTimeout(herberekenTimer);
+    herberekenTimer = setTimeout(() => {
+      herberekenTimer = null;
+      if (naderhand) naderhand();
+      herbereken();
+    }, 150);
+  }
+
   function herbereken() {
     if (!data) return;
     resultaat = Engine.bereken(data, instellingen);
@@ -901,22 +918,23 @@ const UI = (function () {
 
       if (doel.classList.contains('luik-budget')) {
         const luik = LUIKEN.find(l => l.id === doel.dataset.luik);
-        if (luik) { luik.budget = Number(doel.value) || 0; tekenLuiken(); tekenReglement(); herbereken(); }
+        // Enkel de teller meteen bijwerken. Het luikenblok hertekenen zou het
+        // veld vervangen waar je in typt: je verliest de cursor en het veld
+        // springt terug naar het afgeronde getal.
+        if (luik) { luik.budget = Number(doel.value) || 0; werkBudgetTotaalBij(); herberekenStraks(tekenReglement); }
         return;
       }
       if (doel.classList.contains('instelling')) {
         const key = doel.dataset.key;
         instellingen[key] = doel.dataset.type === 'schakelaar' ? doel.checked : (Number(doel.value) || 0);
-        if (key === 'minimumAfstandKm') tekenBrongegevens();
-        herbereken();
+        herberekenStraks(key === 'minimumAfstandKm' ? tekenBrongegevens : null);
         return;
       }
       if (doel.classList.contains('bron-invoer')) {
         const vestiging = data.vestigingen[Number(doel.dataset.index)];
         const waarde = doel.value === '' ? null : Number(doel.value);
         vestiging[doel.dataset.soort][doel.dataset.sleutel] = waarde;
-        herbereken();
-        tekenInfrastructuur();
+        herberekenStraks(tekenInfrastructuur);
       }
     });
 
