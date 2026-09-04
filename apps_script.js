@@ -14,15 +14,20 @@
  * Een kolom bijzetten in GEGEVENS of een rij in INFRASTRUCTUUR volstaat om een
  * nieuw gegeven of een nieuwe locatie in de rekentool te krijgen.
  *
- *   META            sleutel | waarde                (o.a. 'opmerkingen')
+ *   META            sleutel | waarde
+ *                   'opmerkingen' verschijnt als notitie in de tool; elke
+ *                   andere sleutel die overeenkomt met een instelling uit
+ *                   js/config.js stuurt het model bij, bv. 'fluofactuur'.
  *   VESTIGINGEN     sleutel | instellingsnummer | schoolnaam | vestiging |
  *                   adres | postcode | gemeente | deelgemeente
  *   GEGEVENS        sleutel | school | <veldnaam> | <veldnaam> | ...
  *                   Kolomkoppen zijn de veldnamen uit js/config.js:
- *                   lln, schooleters, lln_l1, lln_l4, oki, projectbedrag
+ *                   lln, lln_l1, lln_l4, oki
  *   INFRASTRUCTUUR  id | naam | type | adres
  *   AFSTANDEN       sleutel | school | <infra-id> | ...   waarden in km
  *   BEZOEKEN        sleutel | school | <infra-id> | ...   aantal kinderen
+ *   PROJECTEN       id | naam | omschrijving
+ *   PROJECTBEDRAGEN sleutel | school | <project-id> | ... factuurbedrag in euro
  *   LOG             timestamp | parameters | user agent
  *
  * De kolom 'sleutel' koppelt de tabbladen aan elkaar en wordt automatisch
@@ -39,6 +44,8 @@ var TAB_GEGEVENS = 'GEGEVENS';
 var TAB_INFRASTRUCTUUR = 'INFRASTRUCTUUR';
 var TAB_AFSTANDEN = 'AFSTANDEN';
 var TAB_BEZOEKEN = 'BEZOEKEN';
+var TAB_PROJECTEN = 'PROJECTEN';
+var TAB_PROJECTBEDRAGEN = 'PROJECTBEDRAGEN';
 var TAB_LOG = 'LOG';
 var TAB_OUD = 'APP_DATA';
 
@@ -55,6 +62,7 @@ function onOpen() {
     .addItem('Tabbladen aanmaken', 'maakTabbladen')
     .addItem('Tabbladen synchroniseren', 'synchroniseerTabbladen')
     .addItem('Ontbrekende afstanden berekenen', 'vulAfstandenAan')
+    .addItem('Project toevoegen', 'voegProjectToe')
     .addSeparator()
     .addItem('Eenmalig: migreren van APP_DATA', 'migreerVanAppData')
     .addToUi();
@@ -118,8 +126,11 @@ function tekst(waarde) {
 function bouwPayload() {
   var meta = leesTabel(TAB_META);
   var opmerkingen = '';
+  var instellingen = {};
   meta.rijen.forEach(function (rij) {
-    if (tekst(rij.sleutel).toLowerCase() === 'opmerkingen') opmerkingen = tekst(rij.waarde);
+    var sleutel = tekst(rij.sleutel);
+    if (sleutel.toLowerCase() === 'opmerkingen') opmerkingen = tekst(rij.waarde);
+    else if (sleutel) instellingen[sleutel] = rij.waarde;
   });
 
   var infraTabel = leesTabel(TAB_INFRASTRUCTUUR);
@@ -131,6 +142,16 @@ function bouwPayload() {
         naam: tekst(rij.naam) || tekst(rij.id),
         type: tekst(rij.type) || 'overig',
         adres: tekst(rij.adres)
+      };
+    });
+
+  var projecten = leesTabel(TAB_PROJECTEN).rijen
+    .filter(function (rij) { return tekst(rij.id) !== ''; })
+    .map(function (rij) {
+      return {
+        id: tekst(rij.id),
+        naam: tekst(rij.naam) || tekst(rij.id),
+        omschrijving: tekst(rij.omschrijving)
       };
     });
 
@@ -147,6 +168,7 @@ function bouwPayload() {
 
   var afstandenPerSleutel = leesMatrix(TAB_AFSTANDEN);
   var bezoekenPerSleutel = leesMatrix(TAB_BEZOEKEN);
+  var projectenPerSleutel = leesMatrix(TAB_PROJECTBEDRAGEN);
 
   var vestigingen = leesTabel(TAB_VESTIGINGEN).rijen
     .filter(function (rij) { return tekst(rij.sleutel) !== ''; })
@@ -162,16 +184,19 @@ function bouwPayload() {
         deelgemeente: tekst(rij.deelgemeente),
         gegevens: gegevensPerSleutel[sleutel] || {},
         afstanden: afstandenPerSleutel[sleutel] || {},
-        bezoeken: bezoekenPerSleutel[sleutel] || {}
+        bezoeken: bezoekenPerSleutel[sleutel] || {},
+        projecten: projectenPerSleutel[sleutel] || {}
       };
     });
 
   return {
     meta: {
       opmerkingen: opmerkingen,
+      instellingen: instellingen,
       gegenereerd_op: new Date().toISOString()
     },
     infrastructuur: infrastructuur,
+    projecten: projecten,
     vestigingen: vestigingen
   };
 }
@@ -243,10 +268,12 @@ function zorgVoorTabblad(naam, koppen) {
 function zorgVoorAlleTabbladen() {
   zorgVoorTabblad(TAB_META, ['sleutel', 'waarde']);
   zorgVoorTabblad(TAB_VESTIGINGEN, ['sleutel', 'instellingsnummer', 'schoolnaam', 'vestiging', 'adres', 'postcode', 'gemeente', 'deelgemeente']);
-  zorgVoorTabblad(TAB_GEGEVENS, ['sleutel', KOLOM_LABEL, 'lln', 'schooleters', 'lln_l1', 'lln_l4', 'oki', 'projectbedrag']);
+  zorgVoorTabblad(TAB_GEGEVENS, ['sleutel', KOLOM_LABEL, 'lln', 'lln_l1', 'lln_l4', 'oki']);
   zorgVoorTabblad(TAB_INFRASTRUCTUUR, ['id', 'naam', 'type', 'adres']);
   zorgVoorTabblad(TAB_AFSTANDEN, ['sleutel', KOLOM_LABEL]);
   zorgVoorTabblad(TAB_BEZOEKEN, ['sleutel', KOLOM_LABEL]);
+  zorgVoorTabblad(TAB_PROJECTEN, ['id', 'naam', 'omschrijving']);
+  zorgVoorTabblad(TAB_PROJECTBEDRAGEN, ['sleutel', KOLOM_LABEL]);
 }
 
 function maakTabbladen() {
@@ -260,11 +287,19 @@ function maakTabbladen() {
  * Bestaande waarden blijven staan; er wordt enkel bijgezet.
  */
 function synchroniseerTabbladen() {
+  // Ook meteen de vangnet voor een sheet die nog van voor de projecttabbladen
+  // dateert: ontbrekende tabbladen worden aangemaakt, bestaande blijven.
+  zorgVoorAlleTabbladen();
+
   var vestigingen = leesTabel(TAB_VESTIGINGEN).rijen;
   var sleutels = vestigingen.map(function (v) { return tekst(v.sleutel); }).filter(String);
 
   var infraIds = leesTabel(TAB_INFRASTRUCTUUR).rijen
     .map(function (i) { return tekst(i.id); })
+    .filter(String);
+
+  var projectIds = leesTabel(TAB_PROJECTEN).rijen
+    .map(function (p) { return tekst(p.id); })
     .filter(String);
 
   var toegevoegd = [];
@@ -273,8 +308,10 @@ function synchroniseerTabbladen() {
   toegevoegd.push(vulRijenAan(TAB_AFSTANDEN, sleutels) + ' rijen in AFSTANDEN');
   toegevoegd.push(vulKolommenAan(TAB_BEZOEKEN, infraIds) + ' kolommen in BEZOEKEN');
   toegevoegd.push(vulRijenAan(TAB_BEZOEKEN, sleutels) + ' rijen in BEZOEKEN');
+  toegevoegd.push(vulKolommenAan(TAB_PROJECTBEDRAGEN, projectIds) + ' kolommen in PROJECTBEDRAGEN');
+  toegevoegd.push(vulRijenAan(TAB_PROJECTBEDRAGEN, sleutels) + ' rijen in PROJECTBEDRAGEN');
 
-  [TAB_GEGEVENS, TAB_AFSTANDEN, TAB_BEZOEKEN].forEach(vulLabelsAan);
+  [TAB_GEGEVENS, TAB_AFSTANDEN, TAB_BEZOEKEN, TAB_PROJECTBEDRAGEN].forEach(vulLabelsAan);
 
   SpreadsheetApp.getUi().alert('Gesynchroniseerd.\n\nToegevoegd: ' + toegevoegd.join(', ') + '.');
 }
@@ -347,6 +384,74 @@ function vulKolommenAan(naam, ids) {
 
   sheet.getRange(1, laatsteKolom + 1, 1, nieuw.length).setValues([nieuw]).setFontWeight('bold');
   return nieuw.length;
+}
+
+/* ================================================================== */
+/* Projecten                                                           */
+/* ================================================================== */
+
+/**
+ * Vraagt naar een nieuw project en zet het klaar: een rij in PROJECTEN met de
+ * omschrijving, en een kolom in PROJECTBEDRAGEN waar per school het
+ * factuurbedrag ingetypt kan worden.
+ */
+function voegProjectToe() {
+  var ui = SpreadsheetApp.getUi();
+  zorgVoorAlleTabbladen();
+
+  var naamAntwoord = ui.prompt(
+    'Nieuw project',
+    'Naam van het project, zoals het in de tool moet verschijnen (bv. "Reanimatielessen Rode Kruis"):',
+    ui.ButtonSet.OK_CANCEL);
+  if (naamAntwoord.getSelectedButton() !== ui.Button.OK) return;
+  var naam = tekst(naamAntwoord.getResponseText());
+  if (!naam) { ui.alert('Geen naam ingevuld; er is niets toegevoegd.'); return; }
+
+  var omschrijvingAntwoord = ui.prompt(
+    'Korte omschrijving',
+    'Wat houdt het project in? Deze tekst verschijnt bij het bedrag in de tool. Mag leeg blijven.',
+    ui.ButtonSet.OK_CANCEL);
+  if (omschrijvingAntwoord.getSelectedButton() !== ui.Button.OK) return;
+
+  var bestaandeIds = leesTabel(TAB_PROJECTEN).rijen
+    .map(function (rij) { return tekst(rij.id); })
+    .filter(String);
+  var id = maakProjectId(naam, bestaandeIds);
+
+  blad(TAB_PROJECTEN).appendRow([id, naam, tekst(omschrijvingAntwoord.getResponseText())]);
+
+  vulKolommenAan(TAB_PROJECTBEDRAGEN, [id]);
+  vulRijenAan(TAB_PROJECTBEDRAGEN, leesTabel(TAB_VESTIGINGEN).rijen
+    .map(function (v) { return tekst(v.sleutel); }).filter(String));
+  vulLabelsAan(TAB_PROJECTBEDRAGEN);
+  maakEuroKolom(TAB_PROJECTBEDRAGEN, id);
+
+  ui.alert('Project "' + naam + '" toegevoegd.\n\nVul de factuurbedragen in in de kolom "' +
+           id + '" van het tabblad ' + TAB_PROJECTBEDRAGEN + '.');
+}
+
+/** Een leesbaar, uniek kolom-id: "Reanimatielessen Rode Kruis" -> reanimatielessen_rode_kruis */
+function maakProjectId(naam, bestaandeIds) {
+  var basis = naam.toLowerCase()
+    .replace(/[àáâäã]/g, 'a').replace(/[èéêë]/g, 'e').replace(/[ìíîï]/g, 'i')
+    .replace(/[òóôöõ]/g, 'o').replace(/[ùúûü]/g, 'u').replace(/ç/g, 'c')
+    .replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '')
+    .slice(0, 40) || 'project';
+
+  var id = basis;
+  var teller = 2;
+  while (bestaandeIds.indexOf(id) !== -1) { id = basis + '_' + teller; teller++; }
+  return id;
+}
+
+/** Zet een kolom van een matrixtabblad in euro-opmaak. */
+function maakEuroKolom(naam, kop) {
+  var sheet = blad(naam);
+  if (!sheet) return;
+  var koppen = sheet.getRange(1, 1, 1, Math.max(1, sheet.getLastColumn())).getValues()[0].map(normaliseerKop);
+  var kolom = koppen.indexOf(kop) + 1;
+  if (kolom < 1) return;
+  sheet.getRange(2, kolom, Math.max(1, sheet.getMaxRows() - 1), 1).setNumberFormat('€#,##0.00');
 }
 
 /* ================================================================== */
@@ -502,8 +607,8 @@ function migreerVanAppData() {
     vestigingRijen.push([sleutel, instellingsnummer, tekst(waarden[r][0]), adres, adres,
       postcode, 'Tielt', deelgemeentePerPostcode[postcode] || '']);
 
-    // lln | schooleters | lln_l1 | lln_l4 | oki | projectbedrag
-    gegevensRijen.push([sleutel, '', getalOfNull(waarden[r][9]), getalOfNull(waarden[r][10]), '', '', '', '']);
+    // lln | lln_l1 | lln_l4 | oki
+    gegevensRijen.push([sleutel, '', getalOfNull(waarden[r][9]), '', '', '']);
 
     var afstandRij = [sleutel, ''];
     var dichtstbijZwembad = null;
@@ -540,7 +645,8 @@ function migreerVanAppData() {
   schrijfOnder(TAB_BEZOEKEN, bezoekRijen);
   schrijfOnder(TAB_META, [['opmerkingen', tekst(waarden[0][0])]]);
 
-  [TAB_GEGEVENS, TAB_AFSTANDEN, TAB_BEZOEKEN].forEach(vulLabelsAan);
+  vulRijenAan(TAB_PROJECTBEDRAGEN, vestigingRijen.map(function (r) { return r[0]; }));
+  [TAB_GEGEVENS, TAB_AFSTANDEN, TAB_BEZOEKEN, TAB_PROJECTBEDRAGEN].forEach(vulLabelsAan);
 
   SpreadsheetApp.getUi().alert(
     'Migratie klaar: ' + vestigingRijen.length + ' vestigingen, ' + infraRijen.length + ' infrastructuren.\n\n' +

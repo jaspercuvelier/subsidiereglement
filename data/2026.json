@@ -2,7 +2,10 @@
   "meta": {
     "bron": "migratie van APP_DATA (DB-VOORSTEL SUBSIDIEREGLEMENT TIELT.xlsx)",
     "opmerkingen": "Opgelet! Afstanden zijn correct, leerlingenaantallen (nog) niet. \nEnkel de aantallen voor de scholen van SGFV zijn correct ingevuld.\nAantal zwemmers is ook niet correct.",
-    "gegenereerd_op": null
+    "gegenereerd_op": null,
+    "instellingen": {
+      "fluofactuur": 0
+    }
   },
   "infrastructuur": [
     {
@@ -48,6 +51,7 @@
       "adres": ""
     }
   ],
+  "projecten": [],
   "vestigingen": [
     {
       "instellingsnummer": "002543",
@@ -59,11 +63,9 @@
       "deelgemeente": "Tielt",
       "gegevens": {
         "lln": 120,
-        "schooleters": 110,
         "lln_l1": null,
         "lln_l4": null,
-        "oki": null,
-        "projectbedrag": null
+        "oki": null
       },
       "afstanden": {
         "zwembad_meulebeke": 8.869,
@@ -82,7 +84,8 @@
         "bib_meulebeke": null,
         "bib_tielt": null,
         "sporthal_tielt": 345
-      }
+      },
+      "projecten": {}
     },
     {
       "instellingsnummer": "020231",
@@ -94,11 +97,9 @@
       "deelgemeente": "Meulebeke",
       "gegevens": {
         "lln": 172,
-        "schooleters": 160,
         "lln_l1": null,
         "lln_l4": null,
-        "oki": null,
-        "projectbedrag": null
+        "oki": null
       },
       "afstanden": {
         "zwembad_meulebeke": 3.602,
@@ -117,7 +118,8 @@
         "bib_meulebeke": null,
         "bib_tielt": null,
         "sporthal_tielt": 800
-      }
+      },
+      "projecten": {}
     },
     {
       "instellingsnummer": "020248",
@@ -129,11 +131,9 @@
       "deelgemeente": "Meulebeke",
       "gegevens": {
         "lln": 151,
-        "schooleters": 145,
         "lln_l1": null,
         "lln_l4": null,
-        "oki": null,
-        "projectbedrag": null
+        "oki": null
       },
       "afstanden": {
         "zwembad_meulebeke": 4.512,
@@ -152,7 +152,8 @@
         "bib_meulebeke": null,
         "bib_tielt": null,
         "sporthal_tielt": 345
-      }
+      },
+      "projecten": {}
     },
     {
       "instellingsnummer": "020255",
@@ -164,11 +165,9 @@
       "deelgemeente": "Meulebeke",
       "gegevens": {
         "lln": 156,
-        "schooleters": 115,
         "lln_l1": null,
         "lln_l4": null,
-        "oki": null,
-        "projectbedrag": null
+        "oki": null
       },
       "afstanden": {
         "zwembad_meulebeke": 1.315,
@@ -187,7 +186,8 @@
         "bib_meulebeke": null,
         "bib_tielt": null,
         "sporthal_tielt": 345
-      }
+      },
+      "projecten": {}
     },
     {
       "instellingsnummer": "020263",
@@ -199,11 +199,9 @@
       "deelgemeente": "Meulebeke",
       "gegevens": {
         "lln": 198,
-        "schooleters": 180,
         "lln_l1": null,
         "lln_l4": null,
-        "oki": null,
-        "projectbedrag": null
+        "oki": null
       },
       "afstanden": {
         "zwembad_meulebeke": 5.143,
@@ -222,7 +220,8 @@
         "bib_meulebeke": null,
         "bib_tielt": null,
         "sporthal_tielt": 345
-      }
+      },
+      "projecten": {}
     },
     {
       "instellingsnummer": "020305",
@@ -234,11 +233,9 @@
       "deelgemeente": "Tielt",
       "gegevens": {
         "lln": 300,
-        "schooleters": 290,
         "lln_l1": null,
         "lln_l4": null,
-        "oki": null,
-        "projectbedrag": null
+        "oki": null
       },
       "afstanden": {
         "zwembad_meulebeke": 7.833,
@@ -257,7 +254,8 @@
         "bib_meulebeke": null,
         "bib_tielt": null,
         "sporthal_tielt": 345
-      }
+      },
+      "projecten": {}
     },
     {
       "instellingsnummer": "020313",
@@ -269,11 +267,9 @@
       "deelgemeente": "Tielt",
       "gegevens": {
         "lln": 200,
-        "schooleters": 190,
         "lln_l1": null,
         "lln_l4": null,
-        "oki": null,
-        "projectbedrag": null
+        "oki": null
       },
       "afstanden": {
         "zwembad_meulebeke": 8.004,
@@ -292,7 +288,8 @@
         "bib_meulebeke": null,
         "bib_tielt": null,
         "sporthal_tielt": 345
-      }
+      },
+      "projecten": {}
     },
     {
       "instellingsnummer": "020347",
@@ -304,11 +301,9 @@
       "deelgemeente": "Tielt",
       "gegevens": {
         "lln": 200,
-        "schooleters": 190,
         "lln_l1": null,
         "lln_l4": null,
-        "oki": null,
-        "projectbedrag": null
+        "oki": null
       },
       "afstanden": {
         "zwembad_meulebeke": 14.581,
@@ -327,7 +322,8 @@
         "bib_meulebeke": null,
         "bib_tielt": null,
         "sporthal_tielt": 345
-      }
+      },
+      "projecten": {}
     },
     {
       "instellingsnummer": "020347",
@@ -339,11 +335,9 @@
       "deelgemeente": "Tielt",
       "gegevens": {
         "lln": 100,
-        "schooleters": 90,
         "lln_l1": null,
         "lln_l4": null,
-        "oki": null,
-        "projectbedrag": null
+        "oki": null
       },
       "afstanden": {
         "zwembad_meulebeke": 14.48,
@@ -362,7 +356,8 @@
         "bib_meulebeke": null,
         "bib_tielt": null,
         "sporthal_tielt": 345
-      }
+      },
+      "projecten": {}
     },
     {
       "instellingsnummer": "026757",
@@ -374,11 +369,9 @@
       "deelgemeente": "Tielt",
       "gegevens": {
         "lln": 150,
-        "schooleters": 140,
         "lln_l1": null,
         "lln_l4": null,
-        "oki": null,
-        "projectbedrag": null
+        "oki": null
       },
       "afstanden": {
         "zwembad_meulebeke": 7.203,
@@ -397,7 +390,8 @@
         "bib_meulebeke": null,
         "bib_tielt": null,
         "sporthal_tielt": 388
-      }
+      },
+      "projecten": {}
     },
     {
       "instellingsnummer": "044677",
@@ -409,11 +403,9 @@
       "deelgemeente": "Tielt",
       "gegevens": {
         "lln": 400,
-        "schooleters": 390,
         "lln_l1": null,
         "lln_l4": null,
-        "oki": null,
-        "projectbedrag": null
+        "oki": null
       },
       "afstanden": {
         "zwembad_meulebeke": 7.412,
@@ -432,7 +424,8 @@
         "bib_meulebeke": null,
         "bib_tielt": null,
         "sporthal_tielt": 345
-      }
+      },
+      "projecten": {}
     },
     {
       "instellingsnummer": "110478",
@@ -444,11 +437,9 @@
       "deelgemeente": "Meulebeke",
       "gegevens": {
         "lln": 83,
-        "schooleters": 70,
         "lln_l1": null,
         "lln_l4": null,
-        "oki": null,
-        "projectbedrag": null
+        "oki": null
       },
       "afstanden": {
         "zwembad_meulebeke": 1.455,
@@ -467,7 +458,8 @@
         "bib_meulebeke": null,
         "bib_tielt": null,
         "sporthal_tielt": 345
-      }
+      },
+      "projecten": {}
     },
     {
       "instellingsnummer": "110478",
@@ -479,11 +471,9 @@
       "deelgemeente": "Meulebeke",
       "gegevens": {
         "lln": 200,
-        "schooleters": 190,
         "lln_l1": null,
         "lln_l4": null,
-        "oki": null,
-        "projectbedrag": null
+        "oki": null
       },
       "afstanden": {
         "zwembad_meulebeke": 1.315,
@@ -502,7 +492,8 @@
         "bib_meulebeke": null,
         "bib_tielt": null,
         "sporthal_tielt": 345
-      }
+      },
+      "projecten": {}
     },
     {
       "instellingsnummer": "111104",
@@ -514,11 +505,9 @@
       "deelgemeente": "Tielt",
       "gegevens": {
         "lln": 200,
-        "schooleters": 190,
         "lln_l1": null,
         "lln_l4": null,
-        "oki": null,
-        "projectbedrag": null
+        "oki": null
       },
       "afstanden": {
         "zwembad_meulebeke": 8.342,
@@ -537,7 +526,8 @@
         "bib_meulebeke": null,
         "bib_tielt": null,
         "sporthal_tielt": 345
-      }
+      },
+      "projecten": {}
     },
     {
       "instellingsnummer": "128116",
@@ -549,11 +539,9 @@
       "deelgemeente": "Meulebeke",
       "gegevens": {
         "lln": 180,
-        "schooleters": 170,
         "lln_l1": null,
         "lln_l4": null,
-        "oki": null,
-        "projectbedrag": null
+        "oki": null
       },
       "afstanden": {
         "zwembad_meulebeke": 1.626,
@@ -572,7 +560,8 @@
         "bib_meulebeke": null,
         "bib_tielt": null,
         "sporthal_tielt": 345
-      }
+      },
+      "projecten": {}
     },
     {
       "instellingsnummer": "137811",
@@ -584,11 +573,9 @@
       "deelgemeente": "Tielt",
       "gegevens": {
         "lln": 100,
-        "schooleters": 90,
         "lln_l1": null,
         "lln_l4": null,
-        "oki": null,
-        "projectbedrag": null
+        "oki": null
       },
       "afstanden": {
         "zwembad_meulebeke": 11.873,
@@ -607,7 +594,8 @@
         "bib_meulebeke": null,
         "bib_tielt": null,
         "sporthal_tielt": 345
-      }
+      },
+      "projecten": {}
     }
   ]
 }

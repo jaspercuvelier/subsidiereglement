@@ -19,6 +19,7 @@ const ruw = JSON.parse(fs.readFileSync(path.join(wortel, 'data/2026.json'), 'utf
 const data = {
   meta: ruw.meta,
   infrastructuur: ruw.infrastructuur,
+  projecten: ruw.projecten || [],
   vestigingen: ruw.vestigingen.map((v, i) => Object.assign({ id: i + 1 }, v))
 };
 
@@ -43,15 +44,17 @@ const r = context.Engine.bereken(data, instellingen);
 console.log(`Scholen: ${r.scholen.length}, vestigingen: ${r.vestigingen.length}\n`);
 r.luiken.forEach(luik => {
   const verdeeld = luik.budget - luik.nietVerdeeld;
-  console.log(`Luik ${luik.luik.nummer} ${luik.luik.naam.padEnd(34)} budget ${euro(luik.budget).padStart(12)}  verdeeld ${euro(verdeeld).padStart(12)}  grondslag ${luik.totaleGrondslag.toFixed(2)}`);
+  const soort = luik.centraal ? 'besteed ' : 'verdeeld';
+  console.log(`Luik ${luik.luik.nummer} ${luik.luik.naam.padEnd(34)} budget ${euro(luik.budget).padStart(12)}  ${soort} ${euro(verdeeld).padStart(12)}  grondslag ${luik.totaleGrondslag.toFixed(2)}`);
 });
 console.log(`\nTotaal budget   ${euro(r.totaalBudget)}`);
 console.log(`Totaal verdeeld ${euro(r.totaalVerdeeld)}`);
+console.log(`Centraal betaald ${euro(r.totaalCentraal)}`);
 console.log(`Niet verdeeld   ${euro(r.nietVerdeeld)}\n`);
 
 check('Totaalbudget is € 110.000', Math.abs(r.totaalBudget - 110000) < 0.005);
 
-r.luiken.forEach(luik => {
+r.luiken.filter(l => !l.centraal).forEach(luik => {
   const som = r.scholen.reduce((t, s) => t + luik.perSchool[s.sleutel].bedrag, 0);
   const doel = luik.budget - luik.nietVerdeeld;
   check(`Luik ${luik.luik.nummer}: som per school = verdeeld budget`, Math.abs(som - doel) < 0.005,
@@ -60,9 +63,9 @@ r.luiken.forEach(luik => {
 
 const somTotalen = r.scholen.reduce((t, s) => t + r.totaalPerSchool[s.sleutel], 0);
 check('Som van alle schooltotalen = totaal verdeeld', Math.abs(somTotalen - r.totaalVerdeeld) < 0.005);
+check('Verdeeld + centraal betaald = de volledige enveloppe',
+      Math.abs(r.totaalVerdeeld + r.totaalCentraal - r.totaalBudget) < 0.005);
 
-check('Luik 1 verdeelt niets zolang L1/L4 ontbreken',
-      Math.abs(r.luiken.find(l => l.luik.id === 'fluo').nietVerdeeld - 5000) < 0.005);
 check('Luik 3 valt terug op leerlingenaantal zolang OKI ontbreekt',
       Math.abs(r.luiken.find(l => l.luik.id === 'sociaal').nietVerdeeld) < 0.005);
 check('Luik 2 en 5 hebben dezelfde verdeelsleutel (leerlingen)',
@@ -71,6 +74,36 @@ check('Luik 2 en 5 hebben dezelfde verdeelsleutel (leerlingen)',
         const m = r.luiken.find(l => l.luik.id === 'middag').perSchool[s.sleutel].aandeel;
         return Math.abs(p - m) < 1e-9;
       }));
+
+/* ---- Luik 1: centrale aankoop en overdracht naar luik 2 ------------ */
+console.log('\n=== Controle fluojasjes (luik 1) ===\n');
+
+const bijFactuur = factuur => context.Engine.bereken(
+  data, Object.assign({}, instellingen, { fluofactuur: factuur }));
+
+[0, 3200, 5000, 6500].forEach(factuur => {
+  const uitkomst = bijFactuur(factuur);
+  const fluo = uitkomst.luiken.find(l => l.luik.id === 'fluo');
+  const projecten = uitkomst.luiken.find(l => l.luik.id === 'projecten');
+  console.log(`  factuur ${euro(factuur).padStart(11)} -> saldo ${euro(fluo.saldo).padStart(11)}` +
+              `, pot luik 2 ${euro(projecten.budget).padStart(11)}` +
+              `, totaal ${euro(uitkomst.totaalVerdeeld + uitkomst.totaalCentraal)}`);
+});
+
+check('Luik 1 verdeelt niets over de scholen',
+      bijFactuur(3200).scholen.every(s =>
+        bijFactuur(3200).luiken.find(l => l.luik.id === 'fluo').perSchool[s.sleutel].bedrag === 0));
+check('Wat van de fluojasjes overblijft gaat naar de pot van luik 2',
+      Math.abs(bijFactuur(3200).luiken.find(l => l.luik.id === 'projecten').budget - 16800) < 0.005);
+check('Een duurdere factuur verkleint de pot van luik 2',
+      Math.abs(bijFactuur(6500).luiken.find(l => l.luik.id === 'projecten').budget - 13500) < 0.005);
+check('Een factuur van precies € 5.000 laat luik 2 op € 15.000',
+      Math.abs(bijFactuur(5000).luiken.find(l => l.luik.id === 'projecten').budget - 15000) < 0.005);
+[0, 3200, 5000, 6500].forEach(factuur => {
+  const uitkomst = bijFactuur(factuur);
+  check(`De enveloppe blijft € 110.000 bij een factuur van ${euro(factuur)}`,
+        Math.abs(uitkomst.totaalVerdeeld + uitkomst.totaalCentraal - 110000) < 0.005);
+});
 
 /* ---- Minimumafstand ----------------------------------------------- */
 console.log('\n=== Controle minimumafstand luik 4 ===\n');
@@ -100,14 +133,32 @@ data.infrastructuur.forEach(infra => {
 /* ---- Herverdeling luik 2 ------------------------------------------ */
 console.log('\n=== Controle herverdeling luik 2 ===\n');
 const metFacturen = JSON.parse(JSON.stringify(data));
-metFacturen.vestigingen.forEach((v, i) => { v.gegevens.projectbedrag = i < 3 ? 0 : 4000; });
+metFacturen.projecten = [
+  { id: 'ehbo', naam: 'Reanimatielessen', omschrijving: 'Rode Kruis, per klas' },
+  { id: 'verkeer', naam: 'Verkeersveiligheid', omschrijving: 'Fietsbehendigheid op de speelplaats' }
+];
+metFacturen.vestigingen.forEach((v, i) => {
+  v.projecten = i < 3 ? {} : { ehbo: 2500, verkeer: 1500 };
+});
 const hv = context.Engine.bereken(metFacturen, Object.assign({}, instellingen, { herverdeelProjecten: true }));
 const luik2 = hv.luiken.find(l => l.luik.id === 'projecten');
-console.log(`Rondes: ${luik2.rondes.length}, niet verdeeld: ${euro(luik2.nietVerdeeld)}`);
+console.log(`Pot: ${euro(luik2.budget)}, rondes: ${luik2.rondes.length}, niet verdeeld: ${euro(luik2.nietVerdeeld)}`);
 hv.scholen.forEach(s => {
   const p = luik2.perSchool[s.sleutel];
-  console.log(`  ${s.schoolNaam.slice(0, 38).padEnd(40)} plafond ${String(p.plafond).padStart(6)}  -> ${euro(p.bedrag).padStart(11)}${p.geplafonneerd ? '  (op plafond)' : ''}`);
+  console.log(`  ${s.schoolNaam.slice(0, 32).padEnd(34)} pot ${euro(p.basisaandeel).padStart(11)}` +
+              `  besteed ${euro(s.projectenTotaal).padStart(11)}` +
+              `  beschikbaar ${euro(p.basisaandeel - s.projectenTotaal).padStart(11)}` +
+              `  -> ${euro(p.bedrag).padStart(11)}${p.geplafonneerd ? '  (op plafond)' : ''}`);
 });
+check('De facturen per project worden per school opgeteld',
+      hv.scholen.every(s => Math.abs(s.projectenTotaal - (s.projecten.ehbo || 0) - (s.projecten.verkeer || 0)) < 0.005));
+check('Het aandeel in de pot is onafhankelijk van de herverdeling',
+      hv.scholen.every(s => Math.abs(
+        luik2.perSchool[s.sleutel].basisaandeel
+        - context.Engine.bereken(metFacturen, instellingen).luiken
+            .find(l => l.luik.id === 'projecten').perSchool[s.sleutel].bedrag) < 0.005));
+check('De som van alle potten is de volledige projectpot',
+      Math.abs(hv.scholen.reduce((t, s) => t + luik2.perSchool[s.sleutel].basisaandeel, 0) - luik2.budget) < 0.005);
 check('Scholen zonder facturen krijgen niets uit luik 2',
       hv.scholen.every(s => luik2.perSchool[s.sleutel].plafond !== 0 || luik2.perSchool[s.sleutel].bedrag === 0));
 check('Geen enkele school krijgt meer dan haar plafond',

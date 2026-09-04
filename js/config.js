@@ -35,36 +35,35 @@ const VELDEN = [
     toelichting: 'Leerlingenaantal op de teldatum.'
   },
   {
-    key: 'schooleters', label: 'Schooleters', kort: 'Eters',
-    type: 'aantal', standaard: null, optelbaar: true,
-    toelichting: 'Leerlingen die \'s middags op school eten. Wordt niet gebruikt als verdeelsleutel, wel om de tegemoetkoming per etende leerling te tonen.'
-  },
-  {
     key: 'lln_l1', label: 'Leerlingen 1e leerjaar', kort: 'L1',
     type: 'aantal', standaard: null, optelbaar: true,
-    toelichting: 'Nodig voor luik 1 (fluojasjes).'
+    toelichting: 'Ter info: samen met L4 het aantal fluojasjes dat de stad voor deze school moet aankopen. Geen verdeelsleutel: de stad koopt de jasjes centraal aan.'
   },
   {
     key: 'lln_l4', label: 'Leerlingen 4e leerjaar', kort: 'L4',
     type: 'aantal', standaard: null, optelbaar: true,
-    toelichting: 'Nodig voor luik 1 (fluojasjes).'
+    toelichting: 'Ter info: samen met L1 het aantal fluojasjes dat de stad voor deze school moet aankopen. Geen verdeelsleutel: de stad koopt de jasjes centraal aan.'
   },
   {
     key: 'oki', label: 'OKI-factor', kort: 'OKI',
     type: 'decimaal', standaard: 1, optelbaar: false,
     toelichting: 'Onderwijskansarmoede-indicator. Telkens het cijfer van twee schooljaren geleden. Zolang het echte cijfer ontbreekt rekent de tool met 1,00 voor elke school, en verdeelt luik 3 dus zuiver op leerlingenaantal.'
-  },
-  {
-    key: 'projectbedrag', label: 'Ingediend projectbedrag', kort: 'Facturen',
-    type: 'euro', standaard: null, optelbaar: true,
-    toelichting: 'Totaal van de doorgestuurde facturen voor luik 2. Enkel nodig wanneer de herverdeling van onbenut projectbudget aanstaat.'
   }
 ];
 
 /* ------------------------------------------------------------------ */
 /* 2. INSTELLINGEN: knoppen die het model bijsturen                    */
 /* ------------------------------------------------------------------ */
+/**
+ * Een instelling kan ook uit de sheet komen: zet in het tabblad META een rij
+ * met de key als sleutel, dan overschrijft die waarde de standaard hieronder.
+ */
 const INSTELLINGEN = [
+  {
+    key: 'fluofactuur', label: 'Factuur fluojasjes',
+    type: 'getal', standaard: 0, stap: 100, eenheid: '€',
+    toelichting: 'Het totaalbedrag dat de stad betaalde voor de fluojasjes. De stad koopt centraal aan en vult hier één bedrag in, niet per school. Blijft er van de €5.000 iets over, dan gaat dat naar de pot van luik 2; kost het meer, dan wordt het tekort van die pot afgetrokken.'
+  },
   {
     key: 'minimumAfstandKm', label: 'Minimumafstand vervoer',
     type: 'getal', standaard: 1, stap: 0.5, eenheid: 'km',
@@ -73,7 +72,7 @@ const INSTELLINGEN = [
   {
     key: 'herverdeelProjecten', label: 'Herverdeel onbenut projectbudget',
     type: 'schakelaar', standaard: false,
-    toelichting: 'Plafonneert luik 2 op het ingediende factuurbedrag en verdeelt het overschot in extra rondes over de scholen die wél projecten deden. Vereist ingevulde projectbedragen.'
+    toelichting: 'Eindafrekening van luik 2: plafonneert elke school op wat ze effectief besteedde en verdeelt wat de andere scholen niet opgebruikten in extra rondes. Staat dit uit, dan toont de tool voor elke school gewoon haar aandeel in de pot.'
   }
 ];
 
@@ -95,6 +94,21 @@ const INSTELLINGEN = [
  * herverdeel(ctx) -> boolean
  * afgeleiden: [{ label, formaat, bereken(resultaat, school, ctx) }]
  *      Extra kengetallen in het detailpaneel, bv. bedrag per leerling.
+ *
+ * Een luik dat de stad centraal betaalt in plaats van te verdelen:
+ *
+ * centraal: true
+ *      Er wordt niets over de scholen verdeeld.
+ * besteed(ctx) -> getal
+ *      Wat de stad effectief uitgaf.
+ * overdrachtNaar: 'luikId'
+ *      Het saldo (budget - besteed) verschuift naar dat luik. Positief saldo
+ *      vergroot die pot, een tekort verkleint ze.
+ *
+ * metFacturen: true
+ *      De bestedingen van dit luik worden per school en per project met
+ *      facturen bijgehouden (de projectenmatrix). De tool toont dan per school
+ *      wat de pot is, wat besteed werd en wat nog beschikbaar is.
  */
 const LUIKEN = [
   {
@@ -104,21 +118,18 @@ const LUIKEN = [
     budget: 5000,
     kleur: 'amber',
     doel: 'Een visuele, zichtbare uiting van de stad in het kader van verkeersveiligheid.',
-    grondslagLabel: 'leerlingen 1e + 4e leerjaar',
-    grondslagEenheid: 'lln',
-    vereist: ['lln_l1', 'lln_l4'],
-    grondslag: (v) => getalOfNul(v.gegevens.lln_l1) + getalOfNul(v.gegevens.lln_l4),
-    afgeleiden: [
-      {
-        label: 'Bedrag per fluojasje', formaat: 'euro',
-        bereken: (r) => (r.grondslag > 0 ? r.bedrag / r.grondslag : 0)
-      }
-    ],
+    centraal: true,
+    besteed: (ctx) => getalOfNul(ctx.instellingen.fluofactuur),
+    overdrachtNaar: 'projecten',
+    grondslagLabel: 'centrale aankoop door de stad',
+    grondslagEenheid: '',
     voorwaarden: [
       'Enkel voor het 1e en het 4e leerjaar.',
+      'De stad koopt de jasjes centraal aan en betaalt de factuur zelf; de scholen krijgen geen bedrag uitbetaald.',
+      'Wat van de €5.000 overblijft gaat naar de pot van luik 2; kost het meer, dan wordt het tekort daar afgetrokken.',
       'Fluostrips voor kleuters komen uit het budget van Huis van het Kind en vallen buiten deze €110.000.'
     ],
-    toelichting: 'De €5.000 wordt verdeeld naar rato van het aantal leerlingen in het 1e en 4e leerjaar. Het afgeleide bedrag per jasje toont of het budget realistisch is voor de aankoopprijs.'
+    toelichting: 'De stad bestelt de jasjes voor alle leerlingen van het 1e en 4e leerjaar samen en vult in de tool het totaalbedrag van de factuur in. Er wordt dus niets per school verdeeld. Het verschil met de gereserveerde €5.000 schuift door naar luik 2.'
   },
 
   {
@@ -132,7 +143,8 @@ const LUIKEN = [
     grondslagEenheid: 'lln',
     vereist: ['lln'],
     grondslag: (v) => getalOfNul(v.gegevens.lln),
-    plafond: (school, ctx) => (ctx.instellingen.herverdeelProjecten ? school.gegevens.projectbedrag : null),
+    metFacturen: true,
+    plafond: (school, ctx) => (ctx.instellingen.herverdeelProjecten ? school.projectenTotaal : null),
     herverdeel: (ctx) => ctx.instellingen.herverdeelProjecten === true,
     afgeleiden: [
       {
@@ -141,11 +153,12 @@ const LUIKEN = [
       }
     ],
     voorwaarden: [
-      'De school stuurt de factuur door als bewijsstuk.',
+      'Elke school heeft een eigen pot naar rato van haar leerlingenaantal.',
+      'De facturen worden per school en per project bijgehouden in het tabblad PROJECTEN, zodat elke school ziet waaraan haar pot opging en hoeveel er nog over is.',
       'Projecten hoeven niet vooraf ter bespreking voorgelegd te worden.',
-      'Niet-benut budget kan herverdeeld worden over de scholen die wél projecten deden.'
+      'Wat een school niet gebruikt, kan herverdeeld worden over de scholen die hun eigen pot wél opgebruikten.'
     ],
-    toelichting: 'Elke school krijgt een aandeel van de €15.000 naar rato van haar leerlingenaantal. Staat de herverdeling aan, dan wordt het bedrag geplafonneerd op de ingediende facturen en gaat het overschot in extra rondes naar de scholen die hun plafond nog niet bereikten.'
+    toelichting: 'Elke school krijgt een aandeel van de pot naar rato van haar leerlingenaantal. De pot is de €15.000 plus of min het saldo van luik 1. De stad noteert per school de afzonderlijke projectfacturen; het verschil tussen de pot en het bestede bedrag is wat de school nog beschikbaar heeft. Bij de eindafrekening kan wat onbenut bleef herverdeeld worden.'
   },
 
   {
@@ -221,17 +234,13 @@ const LUIKEN = [
       {
         label: 'Bedrag per leerling', formaat: 'euro',
         bereken: (r, school) => (school.gegevens.lln > 0 ? r.bedrag / school.gegevens.lln : 0)
-      },
-      {
-        label: 'Bedrag per schooleter', formaat: 'euro',
-        bereken: (r, school) => (school.gegevens.schooleters > 0 ? r.bedrag / school.gegevens.schooleters : 0)
       }
     ],
     voorwaarden: [
       'Maximaal €1,20 per begonnen half uur (vergelijkbaar met het toezicht van de BKO).',
       'Het middagtoezicht mag niet duurder zijn dan het ochtend- en avondtoezicht.'
     ],
-    toelichting: 'De €35.000 wordt verdeeld op leerlingenaantal, zoals afgesproken. Het aantal schooleters bepaalt de verdeling niet, maar toont wel hoeveel de school per etende leerling krijgt.'
+    toelichting: 'De €35.000 wordt verdeeld op leerlingenaantal, zoals afgesproken.'
   }
 ];
 

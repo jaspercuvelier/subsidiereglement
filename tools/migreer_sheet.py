@@ -138,14 +138,15 @@ def migreer(xlsx_pad, json_pad):
             "deelgemeente": DEELGEMEENTE_PER_POSTCODE.get(postcode, ""),
             "gegevens": {
                 "lln": geheel(rij.get('J')),
-                "schooleters": geheel(rij.get('K')),
                 "lln_l1": None,
                 "lln_l4": None,
                 "oki": None,
-                "projectbedrag": None,
             },
             "afstanden": afstanden,
             "bezoeken": bezoeken,
+            # De projectfacturen bestonden nog niet in de oude sheet; ze worden
+            # per project ingevuld in het tabblad PROJECTBEDRAGEN.
+            "projecten": {},
         })
 
     payload = {
@@ -153,8 +154,10 @@ def migreer(xlsx_pad, json_pad):
             "bron": "migratie van APP_DATA (DB-VOORSTEL SUBSIDIEREGLEMENT TIELT.xlsx)",
             "opmerkingen": opmerkingen,
             "gegenereerd_op": None,
+            "instellingen": {"fluofactuur": 0},
         },
         "infrastructuur": [{k: v for k, v in i.items() if k != '_kolom'} for i in INFRASTRUCTUUR],
+        "projecten": [],
         "vestigingen": vestigingen,
     }
 

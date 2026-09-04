@@ -8,8 +8,8 @@ Rekentool voor de verdeling van de enveloppe flankerend onderwijs van Stad Tielt
 
 | # | Luik | Budget | Verdeelsleutel |
 |---|------|--------|----------------|
-| 1 | Fluojasjes | €5.000 | leerlingen 1e + 4e leerjaar |
-| 2 | Projecten | €15.000 | leerlingen, optioneel geplafonneerd op de ingediende facturen |
+| 1 | Fluojasjes | €5.000 | niet verdeeld: de stad koopt centraal aan |
+| 2 | Projecten | €15.000 ± saldo luik 1 | leerlingen, optioneel geplafonneerd op de ingediende facturen |
 | 3 | Sociaal engagement | €20.000 | leerlingen × OKI-factor |
 | 4 | Vervoer stedelijke infrastructuur | €35.000 | bezoekers × afstand, vanaf 1 km |
 | 5 | Middagtoezicht | €35.000 | leerlingen |
@@ -17,6 +17,29 @@ Rekentool voor de verdeling van de enveloppe flankerend onderwijs van Stad Tielt
 Er is geen sokkelbedrag: de volledige enveloppe zit in de vijf luiken.
 Fluostrips voor kleuters komen uit het budget van Huis van het Kind en vallen
 buiten deze €110.000.
+
+### Luik 1 en luik 2 hangen samen
+
+De stad bestelt de fluojasjes voor alle scholen samen en betaalt die factuur
+zelf; er gaat dus geen euro van luik 1 naar een school. In de sheet vult de stad
+één totaalbedrag in (`fluofactuur` in het tabblad `META`), niet een bedrag per
+school. Het verschil met de gereserveerde €5.000 schuift door naar luik 2:
+blijft er €1.800 over, dan wordt de projectenpot €16.800; kost het €6.500, dan
+zakt ze naar €13.500. De enveloppe blijft in beide gevallen €110.000.
+
+### De projecten per school
+
+Elke school heeft in luik 2 een eigen pot naar rato van haar leerlingenaantal.
+De stad noteert de projectfacturen in de sheet: elk project is een kolom in
+`PROJECTBEDRAGEN`, met naam en korte omschrijving in `PROJECTEN`. De tool toont
+per school de pot, wat er al besteed is (met de facturen erachter) en wat er nog
+beschikbaar is, zodat een school kan aflezen dat ze bijvoorbeeld nog €200 heeft
+staan.
+
+Zet je de instelling *Herverdeel onbenut projectbudget* aan, dan wordt de
+eindafrekening gemaakt: elke school wordt geplafonneerd op wat ze effectief
+besteedde en wat de andere scholen niet opgebruikten, gaat in extra rondes naar
+de scholen die hun eigen pot wél overschreden.
 
 ## Bestanden
 
@@ -83,7 +106,8 @@ blijft ongemoeid staan als archief.
    toestemming voor de Spreadsheet- en Maps-diensten. De migratie weigert te
    draaien als `VESTIGINGEN` al rijen bevat, zodat je ze niet per ongeluk
    verdubbelt.
-5. *Subsidietool → Tabbladen synchroniseren*.
+5. *Subsidietool → Tabbladen synchroniseren*. Dat maakt meteen de tabbladen
+   `PROJECTEN` en `PROJECTBEDRAGEN` aan als ze nog niet bestaan.
 
 ### 3. De web-app opnieuw uitrollen
 
@@ -104,6 +128,8 @@ In de sheet, in deze volgorde:
    dus handmatige correcties blijven staan.
 3. `BEZOEKEN`: aantallen voor cultuurcentrum, bibliotheek en sporthal.
 4. `GEGEVENS`: `lln_l1`, `lln_l4` en `oki`.
+5. `META`: een rij `fluofactuur` met het totaalbedrag van de factuur voor de
+   fluojasjes.
 
 Na elke stap herlaadt de tool met *Herladen uit sheet*.
 
@@ -121,6 +147,16 @@ automatisch.
 `LUIKEN`, of pas de `grondslag`-functie van een bestaand luik aan. De
 resultatentabel, het detailpaneel en de reglementtekst passen zich aan.
 
+**Een project toevoegen** (bv. reanimatielessen):
+
+Menu *Subsidietool → Project toevoegen*. Het script vraagt naar de naam en een
+korte omschrijving, zet die in `PROJECTEN` en maakt in `PROJECTBEDRAGEN` een
+kolom waar je per school het factuurbedrag intypt. De omschrijving verschijnt in
+de tool bij het bedrag, zodat elke school ziet waaraan haar pot opging.
+
+Wie liever met de hand werkt: een rij bijzetten in `PROJECTEN` en daarna
+*Tabbladen synchroniseren* doet hetzelfde.
+
 **Een stedelijke infrastructuur toevoegen** (bv. een jeugdcentrum):
 
 1. Voeg een rij toe aan het tabblad `INFRASTRUCTUUR` (id, naam, type, adres).
@@ -136,12 +172,14 @@ Er komt geen regel code aan te pas.
 
 | Tabblad | Kolommen |
 |---------|----------|
-| `META` | sleutel \| waarde (o.a. `opmerkingen`) |
+| `META` | sleutel \| waarde (`opmerkingen`, en elke instelling uit `js/config.js`, bv. `fluofactuur`) |
 | `VESTIGINGEN` | sleutel \| instellingsnummer \| schoolnaam \| vestiging \| adres \| postcode \| gemeente \| deelgemeente |
-| `GEGEVENS` | sleutel \| school \| lln \| schooleters \| lln_l1 \| lln_l4 \| oki \| projectbedrag |
+| `GEGEVENS` | sleutel \| school \| lln \| lln_l1 \| lln_l4 \| oki |
 | `INFRASTRUCTUUR` | id \| naam \| type \| adres |
 | `AFSTANDEN` | sleutel \| school \| één kolom per infrastructuur, in km |
 | `BEZOEKEN` | sleutel \| school \| één kolom per infrastructuur, aantal kinderen |
+| `PROJECTEN` | id \| naam \| omschrijving |
+| `PROJECTBEDRAGEN` | sleutel \| school \| één kolom per project, factuurbedrag in euro |
 
 De kolom `sleutel` koppelt de tabbladen aan elkaar; hernoem hem niet.
 
@@ -169,7 +207,13 @@ een toekenning gebaseerd was.
 - **`oki`**: nergens ingevuld. Luik 3 verdeelt daardoor voorlopig zuiver op
   leerlingenaantal (de tool rekent met OKI = 1,00 voor iedereen). Het OKI-cijfer
   is telkens dat van twee schooljaren geleden.
-- **`lln_l1` en `lln_l4`**: nergens ingevuld. Luik 1 verdeelt daardoor niets.
+- **`lln_l1` en `lln_l4`**: nergens ingevuld. Ze sturen geen verdeling meer aan,
+  maar de stad heeft ze wel nodig om te weten hoeveel fluojasjes ze per school
+  moet bestellen.
+- **`fluofactuur`**: nog niet ingevuld in `META`. Zolang dat zo is, schuift de
+  volledige €5.000 van luik 1 door naar de projectenpot van luik 2.
+- **Projectfacturen**: er staat nog geen enkel project in `PROJECTEN`. De pot van
+  elke school staat dus nog helemaal open.
 - **Bezoekersaantallen voor cultuurcentrum en bibliotheek**: ontbreken volledig.
 - **Adres en afstanden van de sporthal**: ontbreken, terwijl de
   bezoekersaantallen er wel zijn.

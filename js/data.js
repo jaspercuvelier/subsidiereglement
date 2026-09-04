@@ -6,11 +6,13 @@
  * tool mee werkt:
  *
  *   { meta, infrastructuur: [{id, naam, type, adres}],
+ *     projecten: [{id, naam, omschrijving}],
  *     vestigingen: [{ id, instellingsnummer, schoolNaam, vestigingNaam, adres,
  *                     postcode, gemeente,
  *                     gegevens:  { <veldkey>: getal|null },
  *                     afstanden: { <infraId>: km|null },
- *                     bezoeken:  { <infraId>: aantal|null } }] }
+ *                     bezoeken:  { <infraId>: aantal|null },
+ *                     projecten: { <projectId>: euro|null } }] }
  *
  * Er zijn twee bronnen, in deze volgorde:
  *   1. het Apps Script-endpoint op de Google Sheet (live)
@@ -60,6 +62,12 @@ const Data = (function () {
       adres: tekst(infra.adres)
     })).filter(infra => infra.id);
 
+    const projecten = (payload.projecten || []).map(project => ({
+      id: tekst(project.id),
+      naam: tekst(project.naam, tekst(project.id)),
+      omschrijving: tekst(project.omschrijving)
+    })).filter(project => project.id);
+
     const vestigingen = (payload.vestigingen || []).map(ruw => {
       const adres = tekst(ruw.adres) || tekst(ruw.vestigingNaam);
       const postcode = tekst(ruw.postcode) || (adres.match(/\b(\d{4})\b/) || [])[1] || '';
@@ -76,6 +84,11 @@ const Data = (function () {
         bezoeken[infra.id] = getalOfNull(ruw.bezoeken ? ruw.bezoeken[infra.id] : null);
       });
 
+      const projectbedragen = {};
+      projecten.forEach(project => {
+        projectbedragen[project.id] = getalOfNull(ruw.projecten ? ruw.projecten[project.id] : null);
+      });
+
       const vestiging = {
         id: volgendeId++,
         instellingsnummer: tekst(ruw.instellingsnummer).padStart(6, '0'),
@@ -85,20 +98,35 @@ const Data = (function () {
         postcode,
         gegevens,
         afstanden,
-        bezoeken
+        bezoeken,
+        projecten: projectbedragen
       };
       vestiging.gemeente = tekst(ruw.gemeente) || GEMEENTE;
       vestiging.deelgemeente = leidDeelgemeenteAf(Object.assign({}, ruw, { adres, postcode }));
       return vestiging;
     });
 
+    // Elke andere META-rij die overeenkomt met een instelling uit config.js
+    // stuurt het model bij vanuit de sheet, bv. het factuurbedrag fluojasjes.
+    const instellingen = {};
+    const ruweInstellingen = (payload.meta && payload.meta.instellingen) || {};
+    INSTELLINGEN.forEach(instelling => {
+      const ruw = ruweInstellingen[instelling.key];
+      if (ruw === undefined || ruw === null || ruw === '') return;
+      instellingen[instelling.key] = instelling.type === 'schakelaar'
+        ? /^(ja|waar|true|1|x)$/i.test(String(ruw).trim())
+        : getalOfNull(ruw);
+    });
+
     return {
       meta: {
         bron: bronOmschrijving,
         opmerkingen: tekst(payload.meta && payload.meta.opmerkingen),
-        gegenereerd_op: (payload.meta && payload.meta.gegenereerd_op) || null
+        gegenereerd_op: (payload.meta && payload.meta.gegenereerd_op) || null,
+        instellingen
       },
       infrastructuur,
+      projecten,
       vestigingen
     };
   }
@@ -182,9 +210,11 @@ const Data = (function () {
       meta: {
         bron: data.meta.bron,
         opmerkingen: data.meta.opmerkingen,
-        gegenereerd_op: new Date().toISOString()
+        gegenereerd_op: new Date().toISOString(),
+        instellingen: data.meta.instellingen || {}
       },
       infrastructuur: data.infrastructuur,
+      projecten: data.projecten,
       vestigingen: data.vestigingen.map(v => ({
         instellingsnummer: v.instellingsnummer,
         schoolNaam: v.schoolNaam,
@@ -195,7 +225,8 @@ const Data = (function () {
         deelgemeente: v.deelgemeente,
         gegevens: v.gegevens,
         afstanden: v.afstanden,
-        bezoeken: v.bezoeken
+        bezoeken: v.bezoeken,
+        projecten: v.projecten
       }))
     };
   }

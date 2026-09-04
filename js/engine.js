@@ -62,7 +62,7 @@ const Engine = (function () {
    * blijven bewaard, want de databeschikbaarheid moet blijven zien wat er
    * eigenlijk ontbreekt.
    */
-  function verrijkVestiging(vestiging) {
+  function verrijkVestiging(vestiging, ctx) {
     const gegevens = {};
     const geschat = {};
     const ontbrekend = {};
@@ -80,11 +80,21 @@ const Engine = (function () {
       }
     });
 
+    // De projectfacturen staan niet in VELDEN maar in een eigen matrix, met
+    // een kolom per project. Ontbrekende cellen tellen als nul euro.
+    const projecten = {};
+    (ctx && ctx.projecten ? ctx.projecten : []).forEach(project => {
+      const ruw = vestiging.projecten ? vestiging.projecten[project.id] : null;
+      projecten[project.id] = isLeeg(ruw) ? 0 : getal(ruw);
+    });
+
     return Object.assign({}, vestiging, {
       gegevens,
       ruweGegevens: vestiging.gegevens || {},
       geschat,
-      ontbrekend
+      ontbrekend,
+      projecten,
+      projectenTotaal: Object.keys(projecten).reduce((t, id) => t + projecten[id], 0)
     });
   }
 
@@ -108,7 +118,9 @@ const Engine = (function () {
           vestigingen: [],
           gegevens: {},
           geschat: {},
-          ontbrekend: {}
+          ontbrekend: {},
+          projecten: {},
+          projectenTotaal: 0
         });
       }
       groepen.get(sleutel).vestigingen.push(vestiging);
@@ -139,6 +151,16 @@ const Engine = (function () {
         school.geschat[veld.key] = ergensGeschat;
         school.ontbrekend[veld.key] = ergensOntbrekend;
       });
+
+      // De projectfacturen van alle vestigingen samen: de school is de
+      // tegenpartij van de stad, niet de losse vestiging.
+      school.vestigingen.forEach(vestiging => {
+        Object.keys(vestiging.projecten || {}).forEach(id => {
+          school.projecten[id] = getal(school.projecten[id]) + getal(vestiging.projecten[id]);
+        });
+      });
+      school.projectenTotaal = Object.keys(school.projecten)
+        .reduce((t, id) => t + school.projecten[id], 0);
     });
 
     return Array.from(groepen.values());
@@ -260,7 +282,7 @@ const Engine = (function () {
   /* Eén luik doorrekenen                                             */
   /* ---------------------------------------------------------------- */
 
-  function berekenLuik(luik, scholen, vestigingen, ctx) {
+  function berekenLuik(luik, scholen, vestigingen, ctx, budget) {
     const herverdeel = typeof luik.herverdeel === 'function' ? luik.herverdeel(ctx) : false;
 
     const deelnemers = scholen.map(school => {
@@ -276,10 +298,17 @@ const Engine = (function () {
     });
 
     const totaleGrondslag = deelnemers.reduce((t, d) => t + d.grondslag, 0);
-    const verdeling = verdeelBudget(deelnemers, luik.budget, herverdeel);
+    const verdeling = verdeelBudget(deelnemers, budget, herverdeel);
 
     const ruweBedragen = deelnemers.map(d => verdeling.bedragen.get(d.sleutel));
-    const afgerond = rondAfNaarCent(ruweBedragen, getal(luik.budget) - verdeling.nietVerdeeld);
+    const afgerond = rondAfNaarCent(ruweBedragen, getal(budget) - verdeling.nietVerdeeld);
+
+    // Het aandeel in de pot zonder plafonds of herverdeling: dat is wat een
+    // school "heeft staan", ook als de eindafrekening er later van afwijkt.
+    const basisBedragen = deelnemers.map(
+      d => (totaleGrondslag > 0 ? getal(budget) * (d.grondslag / totaleGrondslag) : 0)
+    );
+    const basis = rondAfNaarCent(basisBedragen, totaleGrondslag > 0 ? getal(budget) : 0);
 
     const perSchool = {};
     scholen.forEach((school, index) => {
@@ -289,6 +318,7 @@ const Engine = (function () {
         grondslag: deelnemer.grondslag,
         aandeel: totaleGrondslag > 0 ? deelnemer.grondslag / totaleGrondslag : 0,
         bedrag: afgerond[index],
+        basisaandeel: basis[index],
         plafond: deelnemer.plafond,
         geplafonneerd: verdeling.geplafonneerd.has(school.sleutel)
       };
@@ -302,7 +332,9 @@ const Engine = (function () {
 
     return {
       luik,
-      budget: getal(luik.budget),
+      centraal: false,
+      budget: getal(budget),
+      basisbudget: getal(luik.budget),
       totaleGrondslag,
       herverdeel,
       rondes: verdeling.rondes,
@@ -316,29 +348,94 @@ const Engine = (function () {
   /* Volledige berekening                                             */
   /* ---------------------------------------------------------------- */
 
+  /**
+   * Een luik dat de stad centraal betaalt: er wordt niets verdeeld, enkel
+   * vergeleken wat gereserveerd was met wat de factuur kostte. Het saldo
+   * verschuift naar het luik in `overdrachtNaar`.
+   */
+  function berekenCentraalLuik(luik, scholen, ctx) {
+    const budget = getal(luik.budget);
+    const besteed = typeof luik.besteed === 'function' ? getal(luik.besteed(ctx)) : 0;
+
+    const perSchool = {};
+    scholen.forEach(school => {
+      perSchool[school.sleutel] = {
+        sleutel: school.sleutel,
+        grondslag: 0, aandeel: 0, bedrag: 0, basisaandeel: 0,
+        plafond: null, geplafonneerd: false, afgeleiden: []
+      };
+    });
+
+    return {
+      luik,
+      centraal: true,
+      budget,
+      basisbudget: budget,
+      besteed,
+      saldo: budget - besteed,
+      overdrachtNaar: luik.overdrachtNaar || null,
+      totaleGrondslag: 0,
+      herverdeel: false,
+      rondes: [],
+      // Wat hier niet aan facturen opging, wordt elders verdeeld. Zo blijft
+      // "budget - nietVerdeeld" ook voor dit luik gelijk aan wat het kostte.
+      nietVerdeeld: budget - besteed,
+      overdracht: 0,
+      perSchool,
+      dataStatus: { volledig: true, bruikbaar: true, ontbrekendeVelden: [], geschatteVelden: [], infrastructuurGaten: [] }
+    };
+  }
+
   function bereken(data, instellingen) {
     const vestigingen = data.vestigingen || [];
 
     const ctx = {
       infrastructuur: data.infrastructuur || [],
+      projecten: data.projecten || [],
       instellingen,
       velden: VELDEN
     };
 
-    const verrijkt = vestigingen.map(verrijkVestiging);
+    const verrijkt = vestigingen.map(v => verrijkVestiging(v, ctx));
     const scholen = groepeerScholen(verrijkt);
     const actieveLuiken = LUIKEN.filter(l => l.actief !== false);
-    const luikResultaten = actieveLuiken.map(luik => berekenLuik(luik, scholen, verrijkt, ctx));
+
+    // Eerst de centrale luiken: hun saldo bepaalt mee de pot van de luiken
+    // die daarna verdeeld worden.
+    const centraalPerId = {};
+    const overdrachten = {};
+    actieveLuiken.filter(l => l.centraal === true).forEach(luik => {
+      const resultaat = berekenCentraalLuik(luik, scholen, ctx);
+      centraalPerId[luik.id] = resultaat;
+      if (resultaat.overdrachtNaar) {
+        overdrachten[resultaat.overdrachtNaar] = getal(overdrachten[resultaat.overdrachtNaar]) + resultaat.saldo;
+      }
+    });
+
+    const luikResultaten = actieveLuiken.map(luik => {
+      if (centraalPerId[luik.id]) return centraalPerId[luik.id];
+      const overdracht = getal(overdrachten[luik.id]);
+      // Een tekort dat groter is dan de pot zelf kan niet verder verrekend
+      // worden; de pot gaat op nul en het verschil wordt gemeld.
+      const budget = Math.max(0, getal(luik.budget) + overdracht);
+      const resultaat = berekenLuik(luik, scholen, verrijkt, ctx, budget);
+      resultaat.overdracht = overdracht;
+      resultaat.onverrekendTekort = Math.max(0, -(getal(luik.budget) + overdracht));
+      return resultaat;
+    });
+
+    const verdelend = luikResultaten.filter(r => !r.centraal);
 
     const totaalPerSchool = {};
     scholen.forEach(school => {
-      totaalPerSchool[school.sleutel] = luikResultaten.reduce(
+      totaalPerSchool[school.sleutel] = verdelend.reduce(
         (totaal, resultaat) => totaal + resultaat.perSchool[school.sleutel].bedrag, 0
       );
     });
 
     const totaalBudget = actieveLuiken.reduce((t, l) => t + getal(l.budget), 0);
-    const totaalVerdeeld = luikResultaten.reduce((t, r) => t + (r.budget - r.nietVerdeeld), 0);
+    const totaalVerdeeld = verdelend.reduce((t, r) => t + (r.budget - r.nietVerdeeld), 0);
+    const totaalCentraal = luikResultaten.filter(r => r.centraal).reduce((t, r) => t + r.besteed, 0);
 
     return {
       ctx,
@@ -348,7 +445,8 @@ const Engine = (function () {
       totaalPerSchool,
       totaalBudget,
       totaalVerdeeld,
-      nietVerdeeld: totaalBudget - totaalVerdeeld
+      totaalCentraal,
+      nietVerdeeld: totaalBudget - totaalVerdeeld - totaalCentraal
     };
   }
 
