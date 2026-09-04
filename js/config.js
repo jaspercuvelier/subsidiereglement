@@ -1,5 +1,5 @@
 /**
- * BELEIDSCONFIGURATIE — Subsidiereglement flankerend onderwijs Stad Tielt
+ * BELEIDSCONFIGURATIE: subsidiereglement flankerend onderwijs Stad Tielt
  * =======================================================================
  *
  * Dit is het enige bestand dat je moet aanpassen om het reglement te wijzigen.
@@ -15,7 +15,7 @@
  */
 
 /* ------------------------------------------------------------------ */
-/* 1. VELDEN — de gegevens die per vestiging bekend (moeten) zijn      */
+/* 1. VELDEN: de gegevens die per vestiging bekend (moeten) zijn       */
 /* ------------------------------------------------------------------ */
 /**
  * key         sleutel in vestiging.gegevens, en tegelijk de kolomnaam in de
@@ -52,7 +52,7 @@ const VELDEN = [
   {
     key: 'oki', label: 'OKI-factor', kort: 'OKI',
     type: 'decimaal', standaard: 1, optelbaar: false,
-    toelichting: 'Onderwijskansarmoede-indicator. Telkens het cijfer van twee schooljaren geleden. Zolang het echte cijfer ontbreekt rekent de tool met 1,00 voor elke school — dan verdeelt luik 3 dus zuiver op leerlingenaantal.'
+    toelichting: 'Onderwijskansarmoede-indicator. Telkens het cijfer van twee schooljaren geleden. Zolang het echte cijfer ontbreekt rekent de tool met 1,00 voor elke school, en verdeelt luik 3 dus zuiver op leerlingenaantal.'
   },
   {
     key: 'projectbedrag', label: 'Ingediend projectbedrag', kort: 'Facturen',
@@ -62,7 +62,7 @@ const VELDEN = [
 ];
 
 /* ------------------------------------------------------------------ */
-/* 2. INSTELLINGEN — knoppen die het model bijsturen                   */
+/* 2. INSTELLINGEN: knoppen die het model bijsturen                    */
 /* ------------------------------------------------------------------ */
 const INSTELLINGEN = [
   {
@@ -78,7 +78,7 @@ const INSTELLINGEN = [
 ];
 
 /* ------------------------------------------------------------------ */
-/* 3. LUIKEN — de vijf potten van het reglement                        */
+/* 3. LUIKEN: de vijf potten van het reglement                         */
 /* ------------------------------------------------------------------ */
 /**
  * Elk luik is één object. De rekenkern verdeelt het budget proportioneel op
@@ -127,7 +127,7 @@ const LUIKEN = [
     naam: 'Projecten',
     budget: 15000,
     kleur: 'sky',
-    doel: 'Scholen kiezen zelf projecten rond welzijn en veiligheid — reanimatielessen, verkeersveiligheid, gezonde voeding, …',
+    doel: 'Scholen kiezen zelf projecten rond welzijn en veiligheid, zoals reanimatielessen, verkeersveiligheid of gezonde voeding.',
     grondslagLabel: 'leerlingen',
     grondslagEenheid: 'lln',
     vereist: ['lln'],
@@ -236,7 +236,7 @@ const LUIKEN = [
 ];
 
 /* ------------------------------------------------------------------ */
-/* 4. Buiten de enveloppe — ter info in de tool                        */
+/* 4. Buiten de enveloppe: ter info in de tool                         */
 /* ------------------------------------------------------------------ */
 const BUITEN_ENVELOPPE = [
   {

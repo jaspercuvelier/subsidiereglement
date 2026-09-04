@@ -162,9 +162,9 @@ const Data = (function () {
         const omschrijving = naam === 'endpoint' ? 'Google Sheet (live)' : `Snapshot ${SNAPSHOT_URL}`;
         const genormaliseerd = normaliseer(payload, omschrijving);
 
-        // Een bron die wel antwoordt maar geen bruikbare vestigingen oplevert —
-        // bijvoorbeeld een Apps Script dat nog de oude structuur teruggeeft —
-        // telt als mislukt, zodat we doorschuiven naar de volgende bron.
+        // Een bron die wel antwoordt maar geen bruikbare vestigingen oplevert,
+        // bijvoorbeeld een Apps Script dat nog de oude structuur teruggeeft,
+        // telt als mislukt zodat we doorschuiven naar de volgende bron.
         if (genormaliseerd.vestigingen.length === 0) {
           throw new Error('antwoordde zonder vestigingen (verouderde sheetstructuur?)');
         }

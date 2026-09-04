@@ -1,5 +1,5 @@
 /**
- * GOOGLE APPS SCRIPT — brongegevens subsidiereglement Stad Tielt
+ * GOOGLE APPS SCRIPT: brongegevens subsidiereglement Stad Tielt
  * ==============================================================
  *
  * Dit script hangt aan de Google Sheet en doet drie dingen:

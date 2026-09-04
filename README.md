@@ -22,7 +22,7 @@ buiten deze €110.000.
 
 ```
 index.html          markup, verder niets
-js/config.js        BELEID — velden, instellingen en de vijf luiken
+js/config.js        BELEID: velden, instellingen en de vijf luiken
 js/engine.js        rekenkern: groeperen, verdelen, afronden, databeschikbaarheid
 js/data.js          ophalen en normaliseren (Apps Script-endpoint of snapshot)
 js/ui.js            tabellen, detailpaneel, reglementtekst
@@ -67,7 +67,7 @@ structuur teruggeeft, valt de tool terug op `data/2026.json` en zegt de
 statusregel dat ook. Er gaat dus niets stuk.
 
 Let op: de repository is publiek, en dus ook de leerlingenaantallen en adressen
-in `data/`. Zet de repo op private als dat niet de bedoeling is — Pages blijft
+in `data/`. Zet de repo op private als dat niet de bedoeling is. Pages blijft
 dan werken op een betalend plan, anders moet je een andere host kiezen.
 
 ### 2. De sheet migreren
@@ -100,8 +100,8 @@ bovenaan `js/data.js` aanpassen.
 In de sheet, in deze volgorde:
 
 1. `INFRASTRUCTUUR`: adres van de sporthal invullen.
-2. *Subsidietool → Ontbrekende afstanden berekenen* — vult enkel lege cellen, dus
-   handmatige correcties blijven staan.
+2. *Subsidietool → Ontbrekende afstanden berekenen*. Dat vult enkel lege cellen,
+   dus handmatige correcties blijven staan.
 3. `BEZOEKEN`: aantallen voor cultuurcentrum, bibliotheek en sporthal.
 4. `GEGEVENS`: `lln_l1`, `lln_l4` en `oki`.
 
@@ -166,14 +166,14 @@ een toekenning gebaseerd was.
 
 ## Wat nog ontbreekt in de brongegevens
 
-- **`oki`** — nergens ingevuld. Luik 3 verdeelt daardoor voorlopig zuiver op
+- **`oki`**: nergens ingevuld. Luik 3 verdeelt daardoor voorlopig zuiver op
   leerlingenaantal (de tool rekent met OKI = 1,00 voor iedereen). Het OKI-cijfer
   is telkens dat van twee schooljaren geleden.
-- **`lln_l1` en `lln_l4`** — nergens ingevuld. Luik 1 verdeelt daardoor niets.
-- **Bezoekersaantallen voor cultuurcentrum en bibliotheek** — ontbreken volledig.
-- **Adres en afstanden van de sporthal** — ontbreken, terwijl de
+- **`lln_l1` en `lln_l4`**: nergens ingevuld. Luik 1 verdeelt daardoor niets.
+- **Bezoekersaantallen voor cultuurcentrum en bibliotheek**: ontbreken volledig.
+- **Adres en afstanden van de sporthal**: ontbreken, terwijl de
   bezoekersaantallen er wel zijn.
-- **Leerlingenaantallen** — volgens de opmerking in de sheet enkel correct voor
+- **Leerlingenaantallen**: volgens de opmerking in de sheet enkel correct voor
   de scholen van SGFV.
 
 Zolang die gaten er zijn, rust luik 4 volledig op één infrastructuur (het zwembad
@@ -184,7 +184,7 @@ bekend is.
 
 Tielt en Meulebeke zijn gefusioneerd tot één stad. Alle 14 scholen vallen dus
 onder dit reglement, ook die met postcode 8760. De postcode bepaalt enkel nog de
-deelgemeente — in de praktijk schrijft men voor beide vaak gewoon "Tielt" — en
+deelgemeente (in de praktijk schrijft men voor beide vaak gewoon "Tielt") en
 die staat in de tool alleen ter informatie in de kolom *Deelgem.*
 
 Dat verklaart ook de infrastructuurlijst: er is een zwembad, cultuurcentrum en

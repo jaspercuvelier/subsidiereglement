@@ -34,7 +34,7 @@ const UI = (function () {
 
   function formatteer(waarde, formaat) {
     const n = Number(waarde);
-    if (!Number.isFinite(n)) return '—';
+    if (!Number.isFinite(n)) return '-';
     switch (formaat) {
       case 'euro': return euro.format(n);
       case 'euroFijn': return euroFijn.format(n);
@@ -47,7 +47,7 @@ const UI = (function () {
   }
 
   function formatteerVeld(waarde, veld) {
-    if (waarde === null || waarde === undefined || waarde === '') return '—';
+    if (waarde === null || waarde === undefined || waarde === '') return '-';
     if (veld.type === 'euro') return euro.format(Number(waarde));
     if (veld.type === 'decimaal') return decimaal.format(Number(waarde));
     return aantal.format(Number(waarde));
@@ -208,13 +208,13 @@ const UI = (function () {
           <td class="px-3 py-2"><div class="max-w-56 truncate font-medium text-slate-900" title="${esc(v.schoolNaam)}">${esc(v.schoolNaam)}</div>
             <div class="text-xs text-slate-400">${esc(v.instellingsnummer)}</div></td>
           <td class="px-3 py-2"><div class="max-w-56 truncate text-slate-600" title="${esc(v.vestigingNaam)}">${esc(v.vestigingNaam)}</div></td>
-          <td class="px-3 py-2 text-xs text-slate-600">${esc(v.deelgemeente || '—')}</td>
+          <td class="px-3 py-2 text-xs text-slate-600">${esc(v.deelgemeente || '-')}</td>
           ${cellen}
         </tr>`;
     }).join('');
 
     const totalen = VELDEN.map(veld => {
-      if (!veld.optelbaar) return '<td class="px-3 py-2 text-right text-slate-400">—</td>';
+      if (!veld.optelbaar) return '<td class="px-3 py-2 text-right text-slate-400">-</td>';
       const som = data.vestigingen.reduce((t, v) => t + (Number(v.gegevens[veld.key]) || 0), 0);
       return `<td class="px-3 py-2 text-right">${formatteerVeld(som, veld)}</td>`;
     }).join('');
@@ -238,10 +238,10 @@ const UI = (function () {
         const waarde = v[soort][infra.id];
         const invoer = invoerCel(index, soort, infra.id, waarde, isAfstand ? 0.1 : 1);
         if (invoer) return `<td class="px-3 py-2 text-right">${invoer}</td>`;
-        if (waarde === null) return '<td class="px-3 py-2 text-right text-slate-300">—</td>';
+        if (waarde === null) return '<td class="px-3 py-2 text-right text-slate-300">-</td>';
         const teKort = isAfstand && waarde < instellingen.minimumAfstandKm;
         return `<td class="px-3 py-2 text-right whitespace-nowrap ${teKort ? 'text-slate-400 line-through' : ''}"
-                    ${teKort ? `title="Onder de minimumafstand van ${instellingen.minimumAfstandKm} km — telt niet mee"` : ''}>
+                    ${teKort ? `title="Onder de minimumafstand van ${instellingen.minimumAfstandKm} km, telt niet mee"` : ''}>
                   ${isAfstand ? formatteer(waarde, 'km') : aantal.format(waarde)}</td>`;
       }).join('');
       return `<tr>
@@ -382,7 +382,7 @@ const UI = (function () {
     eigen.afgeleiden.forEach(a => stappen.push({ label: a.label, waarde: formatteer(a.waarde, a.formaat) }));
 
     return {
-      titel: `Luik ${luik.nummer} — ${luik.naam}`,
+      titel: `Luik ${luik.nummer}: ${luik.naam}`,
       school: `${school.schoolNaam} · ${school.instellingsnummer || 'geen nummer'}`,
       bedrag: eigen.bedrag,
       uitleg: luik.toelichting,
@@ -401,11 +401,11 @@ const UI = (function () {
       uitleg: 'De som van alle luiken. Elk luik heeft een eigen budget en een eigen verdeelsleutel; er is geen sokkelbedrag.',
       formule: resultaat.luiken.map(r => euro.format(r.perSchool[school.sleutel].bedrag)).join(' + '),
       stappen: resultaat.luiken.map(r => ({
-        label: `Luik ${r.luik.nummer} — ${r.luik.naam}`,
+        label: `Luik ${r.luik.nummer}: ${r.luik.naam}`,
         waarde: euro.format(r.perSchool[school.sleutel].bedrag)
       })).concat([
         { label: 'Leerlingen', waarde: aantal.format(school.gegevens.lln) },
-        { label: 'Bedrag per leerling', waarde: school.gegevens.lln > 0 ? euro.format(resultaat.totaalPerSchool[school.sleutel] / school.gegevens.lln) : '—' }
+        { label: 'Bedrag per leerling', waarde: school.gegevens.lln > 0 ? euro.format(resultaat.totaalPerSchool[school.sleutel] / school.gegevens.lln) : '-' }
       ]),
       voorwaarden: [],
       opmerking: ''
@@ -426,7 +426,7 @@ const UI = (function () {
     }));
 
     return {
-      titel: `Luik ${r.luik.nummer} — ${r.luik.naam}`,
+      titel: `Luik ${r.luik.nummer}: ${r.luik.naam}`,
       school: 'Alle scholen samen',
       bedrag: r.budget - r.nietVerdeeld,
       uitleg: r.luik.toelichting,
@@ -488,7 +488,7 @@ const UI = (function () {
     el('reglement').innerHTML = LUIKEN.filter(l => l.actief !== false).map(luik => `
       <div class="rounded-lg border border-slate-200 p-4">
         <div class="flex items-baseline justify-between gap-3">
-          <h3 class="font-bold text-slate-900">Luik ${luik.nummer} — ${esc(luik.naam)}</h3>
+          <h3 class="font-bold text-slate-900">Luik ${luik.nummer}: ${esc(luik.naam)}</h3>
           <span class="shrink-0 font-mono text-sm text-slate-500">${euro.format(luik.budget)}</span>
         </div>
         <p class="mt-1 text-sm leading-6 text-slate-600"><strong>Doel:</strong> ${esc(luik.doel)}</p>
@@ -497,7 +497,7 @@ const UI = (function () {
         ${(luik.voorwaarden || []).length ? `<ul class="mt-2 list-disc space-y-1 pl-5 text-sm leading-6 text-slate-600">${luik.voorwaarden.map(v => `<li>${esc(v)}</li>`).join('')}</ul>` : ''}
       </div>`).join('') + BUITEN_ENVELOPPE.map(item => `
       <div class="rounded-lg border border-dashed border-slate-300 bg-slate-50 p-4">
-        <h3 class="font-bold text-slate-700">${esc(item.naam)} <span class="text-xs font-normal text-slate-500">— buiten de enveloppe</span></h3>
+        <h3 class="font-bold text-slate-700">${esc(item.naam)} <span class="text-xs font-normal text-slate-500">(buiten de enveloppe)</span></h3>
         <p class="mt-1 text-sm leading-6 text-slate-600">${esc(item.bron)}. ${esc(item.toelichting)}</p>
       </div>`).join('');
   }
