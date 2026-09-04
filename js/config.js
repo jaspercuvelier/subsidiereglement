@@ -37,7 +37,7 @@ const VELDEN = [
   {
     key: 'schooleters', label: 'Schooleters', kort: 'Eters',
     type: 'aantal', standaard: null, optelbaar: true,
-    toelichting: 'Leerlingen die \'s middags op school eten. Wordt niet gebruikt als verdeelsleutel, wel om de tegemoetkoming per eter te tonen.'
+    toelichting: 'Leerlingen die \'s middags op school eten. Wordt niet gebruikt als verdeelsleutel, wel om de tegemoetkoming per etende leerling te tonen.'
   },
   {
     key: 'lln_l1', label: 'Leerlingen 1e leerjaar', kort: 'L1',
@@ -79,11 +79,6 @@ const INSTELLINGEN = [
     key: 'maxDoorrekeningVervoer', label: 'Max. doorrekening vervoer aan gezinnen',
     type: 'getal', standaard: 3, stap: 0.5, eenheid: '€/lln',
     toelichting: 'Voorwaarde uit de notities. Wordt niet in de verdeling verrekend, wel getoond als voorwaarde bij luik 4.'
-  },
-  {
-    key: 'maxTariefHalfuur', label: 'Max. tarief middagtoezicht',
-    type: 'getal', standaard: 1.20, stap: 0.05, eenheid: '€/halfuur',
-    toelichting: 'Voorwaarde uit de notities (vergelijkbaar met het tarief van de BKO).'
   }
 ];
 
@@ -236,21 +231,13 @@ const LUIKEN = [
       {
         label: 'Bedrag per schooleter', formaat: 'euro',
         bereken: (r, school) => (school.gegevens.schooleters > 0 ? r.bedrag / school.gegevens.schooleters : 0)
-      },
-      {
-        label: 'Gedekte halve uren per schooleter', formaat: 'decimaal',
-        bereken: (r, school, ctx) => {
-          const eters = school.gegevens.schooleters;
-          const tarief = ctx.instellingen.maxTariefHalfuur;
-          return eters > 0 && tarief > 0 ? r.bedrag / eters / tarief : 0;
-        }
       }
     ],
     voorwaarden: [
-      'Maximaal het ingestelde tarief per begonnen half uur (vergelijkbaar met het toezicht van de BKO).',
+      'Maximaal €1,20 per begonnen half uur (vergelijkbaar met het toezicht van de BKO).',
       'Het middagtoezicht mag niet duurder zijn dan het ochtend- en avondtoezicht.'
     ],
-    toelichting: 'De €35.000 wordt verdeeld op leerlingenaantal, zoals afgesproken. Het aantal schooleters bepaalt de verdeling niet, maar toont wel hoeveel halve uren toezicht de subsidie per etende leerling dekt.'
+    toelichting: 'De €35.000 wordt verdeeld op leerlingenaantal, zoals afgesproken. Het aantal schooleters bepaalt de verdeling niet, maar toont wel hoeveel de school per etende leerling krijgt.'
   }
 ];
 
