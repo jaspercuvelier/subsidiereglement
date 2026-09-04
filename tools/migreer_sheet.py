@@ -138,8 +138,6 @@ def migreer(xlsx_pad, json_pad):
             "deelgemeente": DEELGEMEENTE_PER_POSTCODE.get(postcode, ""),
             "gegevens": {
                 "lln": geheel(rij.get('J')),
-                "lln_l1": None,
-                "lln_l4": None,
                 "oki": None,
             },
             "afstanden": afstanden,

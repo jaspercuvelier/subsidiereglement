@@ -127,7 +127,7 @@ In de sheet, in deze volgorde:
 2. *Subsidietool → Ontbrekende afstanden berekenen*. Dat vult enkel lege cellen,
    dus handmatige correcties blijven staan.
 3. `BEZOEKEN`: aantallen voor cultuurcentrum, bibliotheek en sporthal.
-4. `GEGEVENS`: `lln_l1`, `lln_l4` en `oki`.
+4. `GEGEVENS`: `oki`.
 5. `META`: een rij `fluofactuur` met het totaalbedrag van de factuur voor de
    fluojasjes.
 
@@ -174,7 +174,7 @@ Er komt geen regel code aan te pas.
 |---------|----------|
 | `META` | sleutel \| waarde (`opmerkingen`, en elke instelling uit `js/config.js`, bv. `fluofactuur`) |
 | `VESTIGINGEN` | sleutel \| instellingsnummer \| schoolnaam \| vestiging \| adres \| postcode \| gemeente \| deelgemeente |
-| `GEGEVENS` | sleutel \| school \| lln \| lln_l1 \| lln_l4 \| oki |
+| `GEGEVENS` | sleutel \| school \| lln \| oki |
 | `INFRASTRUCTUUR` | id \| naam \| type \| adres |
 | `AFSTANDEN` | sleutel \| school \| één kolom per infrastructuur, in km |
 | `BEZOEKEN` | sleutel \| school \| één kolom per infrastructuur, aantal kinderen |
@@ -207,9 +207,6 @@ een toekenning gebaseerd was.
 - **`oki`**: nergens ingevuld. Luik 3 verdeelt daardoor voorlopig zuiver op
   leerlingenaantal (de tool rekent met OKI = 1,00 voor iedereen). Het OKI-cijfer
   is telkens dat van twee schooljaren geleden.
-- **`lln_l1` en `lln_l4`**: nergens ingevuld. Ze sturen geen verdeling meer aan,
-  maar de stad heeft ze wel nodig om te weten hoeveel fluojasjes ze per school
-  moet bestellen.
 - **`fluofactuur`**: nog niet ingevuld in `META`. Zolang dat zo is, schuift de
   volledige €5.000 van luik 1 door naar de projectenpot van luik 2.
 - **Projectfacturen**: er staat nog geen enkel project in `PROJECTEN`. De pot van

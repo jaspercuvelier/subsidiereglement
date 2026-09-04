@@ -35,16 +35,6 @@ const VELDEN = [
     toelichting: 'Leerlingenaantal op de teldatum.'
   },
   {
-    key: 'lln_l1', label: 'Leerlingen 1e leerjaar', kort: 'L1',
-    type: 'aantal', standaard: null, optelbaar: true,
-    toelichting: 'Ter info: samen met L4 het aantal fluojasjes dat de stad voor deze school moet aankopen. Geen verdeelsleutel: de stad koopt de jasjes centraal aan.'
-  },
-  {
-    key: 'lln_l4', label: 'Leerlingen 4e leerjaar', kort: 'L4',
-    type: 'aantal', standaard: null, optelbaar: true,
-    toelichting: 'Ter info: samen met L1 het aantal fluojasjes dat de stad voor deze school moet aankopen. Geen verdeelsleutel: de stad koopt de jasjes centraal aan.'
-  },
-  {
     key: 'oki', label: 'OKI-factor', kort: 'OKI',
     type: 'decimaal', standaard: 1, optelbaar: false,
     toelichting: 'Onderwijskansarmoede-indicator. Telkens het cijfer van twee schooljaren geleden. Zolang het echte cijfer ontbreekt rekent de tool met 1,00 voor elke school, en verdeelt luik 3 dus zuiver op leerlingenaantal.'

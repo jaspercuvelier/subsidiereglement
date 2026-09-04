@@ -22,7 +22,7 @@
  *                   adres | postcode | gemeente | deelgemeente
  *   GEGEVENS        sleutel | school | <veldnaam> | <veldnaam> | ...
  *                   Kolomkoppen zijn de veldnamen uit js/config.js:
- *                   lln, lln_l1, lln_l4, oki
+ *                   lln, oki
  *   INFRASTRUCTUUR  id | naam | type | adres
  *   AFSTANDEN       sleutel | school | <infra-id> | ...   waarden in km
  *   BEZOEKEN        sleutel | school | <infra-id> | ...   aantal kinderen
@@ -268,7 +268,7 @@ function zorgVoorTabblad(naam, koppen) {
 function zorgVoorAlleTabbladen() {
   zorgVoorTabblad(TAB_META, ['sleutel', 'waarde']);
   zorgVoorTabblad(TAB_VESTIGINGEN, ['sleutel', 'instellingsnummer', 'schoolnaam', 'vestiging', 'adres', 'postcode', 'gemeente', 'deelgemeente']);
-  zorgVoorTabblad(TAB_GEGEVENS, ['sleutel', KOLOM_LABEL, 'lln', 'lln_l1', 'lln_l4', 'oki']);
+  zorgVoorTabblad(TAB_GEGEVENS, ['sleutel', KOLOM_LABEL, 'lln', 'oki']);
   zorgVoorTabblad(TAB_INFRASTRUCTUUR, ['id', 'naam', 'type', 'adres']);
   zorgVoorTabblad(TAB_AFSTANDEN, ['sleutel', KOLOM_LABEL]);
   zorgVoorTabblad(TAB_BEZOEKEN, ['sleutel', KOLOM_LABEL]);
@@ -607,8 +607,8 @@ function migreerVanAppData() {
     vestigingRijen.push([sleutel, instellingsnummer, tekst(waarden[r][0]), adres, adres,
       postcode, 'Tielt', deelgemeentePerPostcode[postcode] || '']);
 
-    // lln | lln_l1 | lln_l4 | oki
-    gegevensRijen.push([sleutel, '', getalOfNull(waarden[r][9]), '', '', '']);
+    // lln | oki
+    gegevensRijen.push([sleutel, '', getalOfNull(waarden[r][9]), '']);
 
     var afstandRij = [sleutel, ''];
     var dichtstbijZwembad = null;
@@ -650,8 +650,9 @@ function migreerVanAppData() {
 
   SpreadsheetApp.getUi().alert(
     'Migratie klaar: ' + vestigingRijen.length + ' vestigingen, ' + infraRijen.length + ' infrastructuren.\n\n' +
-    'Nog aan te vullen: lln_l1, lln_l4 en oki in GEGEVENS, de bezoekersaantallen voor cultuurcentrum ' +
-    'en bibliotheek, en het adres van de sporthal (kies daarna "Ontbrekende afstanden berekenen").'
+    'Nog aan te vullen: oki in GEGEVENS, fluofactuur in META, de bezoekersaantallen voor ' +
+    'cultuurcentrum en bibliotheek, en het adres van de sporthal (kies daarna ' +
+    '"Ontbrekende afstanden berekenen").'
   );
 }
 
