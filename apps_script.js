@@ -303,6 +303,9 @@ function vulLabelsAan(naam) {
   var laatsteRij = sheet.getLastRow();
   if (laatsteRij < 2) return;
 
+  // Let op de puntkomma's als argumentscheiding. setFormulas() volgt de locale
+  // van de spreadsheet, en die staat hier Belgisch: met een komma weigert Sheets
+  // de formule. Verander dit niet naar de Amerikaanse schrijfwijze.
   var formules = [];
   for (var r = 2; r <= laatsteRij; r++) {
     formules.push(['=IFERROR(VLOOKUP($A' + r + ';' + TAB_VESTIGINGEN + '!$A:$D;3;FALSE)' +
