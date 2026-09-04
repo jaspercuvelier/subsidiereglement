@@ -74,11 +74,6 @@ const INSTELLINGEN = [
     key: 'herverdeelProjecten', label: 'Herverdeel onbenut projectbudget',
     type: 'schakelaar', standaard: false,
     toelichting: 'Plafonneert luik 2 op het ingediende factuurbedrag en verdeelt het overschot in extra rondes over de scholen die wél projecten deden. Vereist ingevulde projectbedragen.'
-  },
-  {
-    key: 'maxDoorrekeningVervoer', label: 'Max. doorrekening vervoer aan gezinnen',
-    type: 'getal', standaard: 3, stap: 0.5, eenheid: '€/lln',
-    toelichting: 'Voorwaarde uit de notities. Wordt niet in de verdeling verrekend, wel getoond als voorwaarde bij luik 4.'
   }
 ];
 
@@ -206,8 +201,7 @@ const LUIKEN = [
       }
     ],
     voorwaarden: [
-      'Enkel verplaatsingen vanaf de ingestelde minimumafstand tellen mee.',
-      'De school rekent maximaal het ingestelde bedrag per leerling door aan de gezinnen.'
+      'Enkel verplaatsingen vanaf de ingestelde minimumafstand tellen mee.'
     ],
     toelichting: 'Per infrastructuur wordt het cumulatieve aantal kinderen dat er binnenkomt vermenigvuldigd met de afstand van de vestiging tot die infrastructuur. De som van al die producten is de verdeelsleutel: veel kinderen die ver moeten rijden geeft een groter aandeel.'
   },
