@@ -1,0 +1,613 @@
+{
+  "meta": {
+    "bron": "migratie van APP_DATA (DB-VOORSTEL SUBSIDIEREGLEMENT TIELT.xlsx)",
+    "opmerkingen": "Opgelet! Afstanden zijn correct, leerlingenaantallen (nog) niet. \nEnkel de aantallen voor de scholen van SGFV zijn correct ingevuld.\nAantal zwemmers is ook niet correct.",
+    "gegenereerd_op": null
+  },
+  "infrastructuur": [
+    {
+      "id": "zwembad_meulebeke",
+      "naam": "Zwembad Meulebeke",
+      "type": "zwembad",
+      "adres": "Ter Borchtlaan 9, 8760 Meulebeke"
+    },
+    {
+      "id": "zwembad_tielt",
+      "naam": "Zwembad Tielt",
+      "type": "zwembad",
+      "adres": ""
+    },
+    {
+      "id": "cc_meulebeke",
+      "naam": "Cultureel Centrum Meulebeke",
+      "type": "cultuur",
+      "adres": "Karel van Manderstraat 26, 8760 Meulebeke"
+    },
+    {
+      "id": "cc_tielt",
+      "naam": "Cultuurcentrum Tielt",
+      "type": "cultuur",
+      "adres": "Sint-Michielstraat 9, 8700 Tielt"
+    },
+    {
+      "id": "bib_meulebeke",
+      "naam": "Bibliotheek Meulebeke",
+      "type": "bibliotheek",
+      "adres": "Karel van Manderstraat 26, 8760 Meulebeke"
+    },
+    {
+      "id": "bib_tielt",
+      "naam": "Bibliotheek Tielt",
+      "type": "bibliotheek",
+      "adres": "Lakenmarkt 9, 8700 Tielt"
+    },
+    {
+      "id": "sporthal_tielt",
+      "naam": "Sporthal Tielt",
+      "type": "sport",
+      "adres": ""
+    }
+  ],
+  "vestigingen": [
+    {
+      "instellingsnummer": "002543",
+      "schoolNaam": "GO! Basisschool De Springplank Tielt",
+      "vestigingNaam": "Tulpenlaan 14, 8700 Tielt",
+      "adres": "Tulpenlaan 14, 8700 Tielt",
+      "postcode": "8700",
+      "gemeente": "Tielt",
+      "deelgemeente": "Tielt",
+      "gegevens": {
+        "lln": 120,
+        "schooleters": 110,
+        "lln_l1": null,
+        "lln_l4": null,
+        "oki": null,
+        "projectbedrag": null
+      },
+      "afstanden": {
+        "zwembad_meulebeke": 8.869,
+        "zwembad_tielt": null,
+        "cc_meulebeke": 7.443,
+        "cc_tielt": 2.136,
+        "bib_meulebeke": 7.443,
+        "bib_tielt": 1.113,
+        "sporthal_tielt": null
+      },
+      "bezoeken": {
+        "zwembad_meulebeke": 567,
+        "zwembad_tielt": null,
+        "cc_meulebeke": null,
+        "cc_tielt": null,
+        "bib_meulebeke": null,
+        "bib_tielt": null,
+        "sporthal_tielt": 345
+      }
+    },
+    {
+      "instellingsnummer": "020231",
+      "schoolNaam": "Vrije Basisschool Paanderschool",
+      "vestigingNaam": "Paanderstraat 49, 8760 Tielt",
+      "adres": "Paanderstraat 49, 8760 Tielt",
+      "postcode": "8760",
+      "gemeente": "Tielt",
+      "deelgemeente": "Meulebeke",
+      "gegevens": {
+        "lln": 172,
+        "schooleters": 160,
+        "lln_l1": null,
+        "lln_l4": null,
+        "oki": null,
+        "projectbedrag": null
+      },
+      "afstanden": {
+        "zwembad_meulebeke": 3.602,
+        "zwembad_tielt": null,
+        "cc_meulebeke": 3.374,
+        "cc_tielt": 8.188,
+        "bib_meulebeke": 3.374,
+        "bib_tielt": 9.346,
+        "sporthal_tielt": null
+      },
+      "bezoeken": {
+        "zwembad_meulebeke": 567,
+        "zwembad_tielt": null,
+        "cc_meulebeke": null,
+        "cc_tielt": null,
+        "bib_meulebeke": null,
+        "bib_tielt": null,
+        "sporthal_tielt": 800
+      }
+    },
+    {
+      "instellingsnummer": "020248",
+      "schoolNaam": "Vrije Basisschool 't Veld",
+      "vestigingNaam": "Sint-Antoniusstraat 3, 8760 Tielt",
+      "adres": "Sint-Antoniusstraat 3, 8760 Tielt",
+      "postcode": "8760",
+      "gemeente": "Tielt",
+      "deelgemeente": "Meulebeke",
+      "gegevens": {
+        "lln": 151,
+        "schooleters": 145,
+        "lln_l1": null,
+        "lln_l4": null,
+        "oki": null,
+        "projectbedrag": null
+      },
+      "afstanden": {
+        "zwembad_meulebeke": 4.512,
+        "zwembad_tielt": null,
+        "cc_meulebeke": 5.416,
+        "cc_tielt": 8.638,
+        "bib_meulebeke": 5.416,
+        "bib_tielt": 9.279,
+        "sporthal_tielt": null
+      },
+      "bezoeken": {
+        "zwembad_meulebeke": 567,
+        "zwembad_tielt": null,
+        "cc_meulebeke": null,
+        "cc_tielt": null,
+        "bib_meulebeke": null,
+        "bib_tielt": null,
+        "sporthal_tielt": 345
+      }
+    },
+    {
+      "instellingsnummer": "020255",
+      "schoolNaam": "Vrije Kleuterschool - Sint-Lutgardis",
+      "vestigingNaam": "Karel van Manderstraat 33, 8760 Tielt",
+      "adres": "Karel van Manderstraat 33, 8760 Tielt",
+      "postcode": "8760",
+      "gemeente": "Tielt",
+      "deelgemeente": "Meulebeke",
+      "gegevens": {
+        "lln": 156,
+        "schooleters": 115,
+        "lln_l1": null,
+        "lln_l4": null,
+        "oki": null,
+        "projectbedrag": null
+      },
+      "afstanden": {
+        "zwembad_meulebeke": 1.315,
+        "zwembad_tielt": null,
+        "cc_meulebeke": 0.029,
+        "cc_tielt": 6.619,
+        "bib_meulebeke": 0.029,
+        "bib_tielt": 7.777,
+        "sporthal_tielt": null
+      },
+      "bezoeken": {
+        "zwembad_meulebeke": 567,
+        "zwembad_tielt": null,
+        "cc_meulebeke": null,
+        "cc_tielt": null,
+        "bib_meulebeke": null,
+        "bib_tielt": null,
+        "sporthal_tielt": 345
+      }
+    },
+    {
+      "instellingsnummer": "020263",
+      "schoolNaam": "Vrije Basisschool - Marialoopschool",
+      "vestigingNaam": "Marialoopsteenweg 55, 8760 Tielt",
+      "adres": "Marialoopsteenweg 55, 8760 Tielt",
+      "postcode": "8760",
+      "gemeente": "Tielt",
+      "deelgemeente": "Meulebeke",
+      "gegevens": {
+        "lln": 198,
+        "schooleters": 180,
+        "lln_l1": null,
+        "lln_l4": null,
+        "oki": null,
+        "projectbedrag": null
+      },
+      "afstanden": {
+        "zwembad_meulebeke": 5.143,
+        "zwembad_tielt": null,
+        "cc_meulebeke": 3.297,
+        "cc_tielt": 5.688,
+        "bib_meulebeke": 3.297,
+        "bib_tielt": 6.649,
+        "sporthal_tielt": null
+      },
+      "bezoeken": {
+        "zwembad_meulebeke": 567,
+        "zwembad_tielt": null,
+        "cc_meulebeke": null,
+        "cc_tielt": null,
+        "bib_meulebeke": null,
+        "bib_tielt": null,
+        "sporthal_tielt": 345
+      }
+    },
+    {
+      "instellingsnummer": "020305",
+      "schoolNaam": "Vrije Basisschool - 't Nieuwland",
+      "vestigingNaam": "Ontvangerstraat 7, 8700 Tielt",
+      "adres": "Ontvangerstraat 7, 8700 Tielt",
+      "postcode": "8700",
+      "gemeente": "Tielt",
+      "deelgemeente": "Tielt",
+      "gegevens": {
+        "lln": 300,
+        "schooleters": 290,
+        "lln_l1": null,
+        "lln_l4": null,
+        "oki": null,
+        "projectbedrag": null
+      },
+      "afstanden": {
+        "zwembad_meulebeke": 7.833,
+        "zwembad_tielt": null,
+        "cc_meulebeke": 6.406,
+        "cc_tielt": 0.713,
+        "bib_meulebeke": 6.406,
+        "bib_tielt": 1.11,
+        "sporthal_tielt": null
+      },
+      "bezoeken": {
+        "zwembad_meulebeke": 567,
+        "zwembad_tielt": null,
+        "cc_meulebeke": null,
+        "cc_tielt": null,
+        "bib_meulebeke": null,
+        "bib_tielt": null,
+        "sporthal_tielt": 345
+      }
+    },
+    {
+      "instellingsnummer": "020313",
+      "schoolNaam": "Vrije Basisschool -Heilige Familie",
+      "vestigingNaam": "Driesstraat 1, 8700 Tielt",
+      "adres": "Driesstraat 1, 8700 Tielt",
+      "postcode": "8700",
+      "gemeente": "Tielt",
+      "deelgemeente": "Tielt",
+      "gegevens": {
+        "lln": 200,
+        "schooleters": 190,
+        "lln_l1": null,
+        "lln_l4": null,
+        "oki": null,
+        "projectbedrag": null
+      },
+      "afstanden": {
+        "zwembad_meulebeke": 8.004,
+        "zwembad_tielt": null,
+        "cc_meulebeke": 6.578,
+        "cc_tielt": 1.124,
+        "bib_meulebeke": 6.578,
+        "bib_tielt": 1.12,
+        "sporthal_tielt": null
+      },
+      "bezoeken": {
+        "zwembad_meulebeke": 567,
+        "zwembad_tielt": null,
+        "cc_meulebeke": null,
+        "cc_tielt": null,
+        "bib_meulebeke": null,
+        "bib_tielt": null,
+        "sporthal_tielt": 345
+      }
+    },
+    {
+      "instellingsnummer": "020347",
+      "schoolNaam": "Vrije Basisschool de Wijzer",
+      "vestigingNaam": "Molenweg 2, 8700 Tielt",
+      "adres": "Molenweg 2, 8700 Tielt",
+      "postcode": "8700",
+      "gemeente": "Tielt",
+      "deelgemeente": "Tielt",
+      "gegevens": {
+        "lln": 200,
+        "schooleters": 190,
+        "lln_l1": null,
+        "lln_l4": null,
+        "oki": null,
+        "projectbedrag": null
+      },
+      "afstanden": {
+        "zwembad_meulebeke": 14.581,
+        "zwembad_tielt": null,
+        "cc_meulebeke": 13.477,
+        "cc_tielt": 7.907,
+        "bib_meulebeke": 13.477,
+        "bib_tielt": 7.778,
+        "sporthal_tielt": null
+      },
+      "bezoeken": {
+        "zwembad_meulebeke": 567,
+        "zwembad_tielt": null,
+        "cc_meulebeke": null,
+        "cc_tielt": null,
+        "bib_meulebeke": null,
+        "bib_tielt": null,
+        "sporthal_tielt": 345
+      }
+    },
+    {
+      "instellingsnummer": "020347",
+      "schoolNaam": "Vrije Basisschool de Wijzer",
+      "vestigingNaam": "Kanegemstraat 168, 8700 Tielt",
+      "adres": "Kanegemstraat 168, 8700 Tielt",
+      "postcode": "8700",
+      "gemeente": "Tielt",
+      "deelgemeente": "Tielt",
+      "gegevens": {
+        "lln": 100,
+        "schooleters": 90,
+        "lln_l1": null,
+        "lln_l4": null,
+        "oki": null,
+        "projectbedrag": null
+      },
+      "afstanden": {
+        "zwembad_meulebeke": 14.48,
+        "zwembad_tielt": null,
+        "cc_meulebeke": 13.171,
+        "cc_tielt": 7.601,
+        "bib_meulebeke": 13.171,
+        "bib_tielt": 6.78,
+        "sporthal_tielt": null
+      },
+      "bezoeken": {
+        "zwembad_meulebeke": 567,
+        "zwembad_tielt": null,
+        "cc_meulebeke": null,
+        "cc_tielt": null,
+        "bib_meulebeke": null,
+        "bib_tielt": null,
+        "sporthal_tielt": 345
+      }
+    },
+    {
+      "instellingsnummer": "026757",
+      "schoolNaam": "Vrije Basisschool voor Buitengewoon Onderwijs - De Vlinder",
+      "vestigingNaam": "Oude Pittemstraat 1, 8700 Tielt",
+      "adres": "Oude Pittemstraat 1, 8700 Tielt",
+      "postcode": "8700",
+      "gemeente": "Tielt",
+      "deelgemeente": "Tielt",
+      "gegevens": {
+        "lln": 150,
+        "schooleters": 140,
+        "lln_l1": null,
+        "lln_l4": null,
+        "oki": null,
+        "projectbedrag": null
+      },
+      "afstanden": {
+        "zwembad_meulebeke": 7.203,
+        "zwembad_tielt": null,
+        "cc_meulebeke": 5.777,
+        "cc_tielt": 0.952,
+        "bib_meulebeke": 5.777,
+        "bib_tielt": 1.786,
+        "sporthal_tielt": null
+      },
+      "bezoeken": {
+        "zwembad_meulebeke": 600,
+        "zwembad_tielt": null,
+        "cc_meulebeke": null,
+        "cc_tielt": null,
+        "bib_meulebeke": null,
+        "bib_tielt": null,
+        "sporthal_tielt": 388
+      }
+    },
+    {
+      "instellingsnummer": "044677",
+      "schoolNaam": "Vrije Basisschool Het spoor",
+      "vestigingNaam": "Stationstraat 22, 8700 Tielt",
+      "adres": "Stationstraat 22, 8700 Tielt",
+      "postcode": "8700",
+      "gemeente": "Tielt",
+      "deelgemeente": "Tielt",
+      "gegevens": {
+        "lln": 400,
+        "schooleters": 390,
+        "lln_l1": null,
+        "lln_l4": null,
+        "oki": null,
+        "projectbedrag": null
+      },
+      "afstanden": {
+        "zwembad_meulebeke": 7.412,
+        "zwembad_tielt": null,
+        "cc_meulebeke": 5.986,
+        "cc_tielt": 0.532,
+        "bib_meulebeke": 5.986,
+        "bib_tielt": 1.95,
+        "sporthal_tielt": null
+      },
+      "bezoeken": {
+        "zwembad_meulebeke": 567,
+        "zwembad_tielt": null,
+        "cc_meulebeke": null,
+        "cc_tielt": null,
+        "bib_meulebeke": null,
+        "bib_tielt": null,
+        "sporthal_tielt": 345
+      }
+    },
+    {
+      "instellingsnummer": "110478",
+      "schoolNaam": "Vrije Lagere School Sint-Amandus",
+      "vestigingNaam": "Schutterijstraat 6, 8760 Tielt",
+      "adres": "Schutterijstraat 6, 8760 Tielt",
+      "postcode": "8760",
+      "gemeente": "Tielt",
+      "deelgemeente": "Meulebeke",
+      "gegevens": {
+        "lln": 83,
+        "schooleters": 70,
+        "lln_l1": null,
+        "lln_l4": null,
+        "oki": null,
+        "projectbedrag": null
+      },
+      "afstanden": {
+        "zwembad_meulebeke": 1.455,
+        "zwembad_tielt": null,
+        "cc_meulebeke": 1.024,
+        "cc_tielt": 6.308,
+        "bib_meulebeke": 1.024,
+        "bib_tielt": 7.466,
+        "sporthal_tielt": null
+      },
+      "bezoeken": {
+        "zwembad_meulebeke": 567,
+        "zwembad_tielt": null,
+        "cc_meulebeke": null,
+        "cc_tielt": null,
+        "bib_meulebeke": null,
+        "bib_tielt": null,
+        "sporthal_tielt": 345
+      }
+    },
+    {
+      "instellingsnummer": "110478",
+      "schoolNaam": "Vrije Lagere School Sint-Amandus",
+      "vestigingNaam": "Karel van Manderstraat 33, 8760 Tielt",
+      "adres": "Karel van Manderstraat 33, 8760 Tielt",
+      "postcode": "8760",
+      "gemeente": "Tielt",
+      "deelgemeente": "Meulebeke",
+      "gegevens": {
+        "lln": 200,
+        "schooleters": 190,
+        "lln_l1": null,
+        "lln_l4": null,
+        "oki": null,
+        "projectbedrag": null
+      },
+      "afstanden": {
+        "zwembad_meulebeke": 1.315,
+        "zwembad_tielt": null,
+        "cc_meulebeke": 0.029,
+        "cc_tielt": 6.619,
+        "bib_meulebeke": 0.029,
+        "bib_tielt": 7.777,
+        "sporthal_tielt": null
+      },
+      "bezoeken": {
+        "zwembad_meulebeke": 567,
+        "zwembad_tielt": null,
+        "cc_meulebeke": null,
+        "cc_tielt": null,
+        "bib_meulebeke": null,
+        "bib_tielt": null,
+        "sporthal_tielt": 345
+      }
+    },
+    {
+      "instellingsnummer": "111104",
+      "schoolNaam": "GO! freinetschool - Het Reuzenhuis Tielt",
+      "vestigingNaam": "Gruuthusestraat 90, 8700 Tielt",
+      "adres": "Gruuthusestraat 90, 8700 Tielt",
+      "postcode": "8700",
+      "gemeente": "Tielt",
+      "deelgemeente": "Tielt",
+      "gegevens": {
+        "lln": 200,
+        "schooleters": 190,
+        "lln_l1": null,
+        "lln_l4": null,
+        "oki": null,
+        "projectbedrag": null
+      },
+      "afstanden": {
+        "zwembad_meulebeke": 8.342,
+        "zwembad_tielt": null,
+        "cc_meulebeke": 6.623,
+        "cc_tielt": 1.462,
+        "bib_meulebeke": 6.623,
+        "bib_tielt": 2.742,
+        "sporthal_tielt": null
+      },
+      "bezoeken": {
+        "zwembad_meulebeke": 567,
+        "zwembad_tielt": null,
+        "cc_meulebeke": null,
+        "cc_tielt": null,
+        "bib_meulebeke": null,
+        "bib_tielt": null,
+        "sporthal_tielt": 345
+      }
+    },
+    {
+      "instellingsnummer": "128116",
+      "schoolNaam": "GO! Freinetschool De Koorddanser",
+      "vestigingNaam": "Baljuw Vermeulenstraat 1, 8760 Tielt",
+      "adres": "Baljuw Vermeulenstraat 1, 8760 Tielt",
+      "postcode": "8760",
+      "gemeente": "Tielt",
+      "deelgemeente": "Meulebeke",
+      "gegevens": {
+        "lln": 180,
+        "schooleters": 170,
+        "lln_l1": null,
+        "lln_l4": null,
+        "oki": null,
+        "projectbedrag": null
+      },
+      "afstanden": {
+        "zwembad_meulebeke": 1.626,
+        "zwembad_tielt": null,
+        "cc_meulebeke": 0.672,
+        "cc_tielt": 6.281,
+        "bib_meulebeke": 0.672,
+        "bib_tielt": 7.439,
+        "sporthal_tielt": null
+      },
+      "bezoeken": {
+        "zwembad_meulebeke": 900,
+        "zwembad_tielt": null,
+        "cc_meulebeke": null,
+        "cc_tielt": null,
+        "bib_meulebeke": null,
+        "bib_tielt": null,
+        "sporthal_tielt": 345
+      }
+    },
+    {
+      "instellingsnummer": "137811",
+      "schoolNaam": "GO! Basisschool De Dorpsparel",
+      "vestigingNaam": "Henri D'Hontstraat 42, 8700 Tielt",
+      "adres": "Henri D'Hontstraat 42, 8700 Tielt",
+      "postcode": "8700",
+      "gemeente": "Tielt",
+      "deelgemeente": "Tielt",
+      "gegevens": {
+        "lln": 100,
+        "schooleters": 90,
+        "lln_l1": null,
+        "lln_l4": null,
+        "oki": null,
+        "projectbedrag": null
+      },
+      "afstanden": {
+        "zwembad_meulebeke": 11.873,
+        "zwembad_tielt": null,
+        "cc_meulebeke": 10.447,
+        "cc_tielt": 5.14,
+        "bib_meulebeke": 10.447,
+        "bib_tielt": 3.79,
+        "sporthal_tielt": null
+      },
+      "bezoeken": {
+        "zwembad_meulebeke": 567,
+        "zwembad_tielt": null,
+        "cc_meulebeke": null,
+        "cc_tielt": null,
+        "bib_meulebeke": null,
+        "bib_tielt": null,
+        "sporthal_tielt": 345
+      }
+    }
+  ]
+}

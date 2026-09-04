@@ -1,0 +1,35 @@
+- Vraag vanuit scholen: geen administratie
+- Kan in meegegaan worden, voor een stuk.
+- Wat heeft de stad daar dan wel graag tegenover?
+  - Er is nu een concreet voorstel.
+    - Er is 110K
+-
+  - Eerste luik:
+    - 5K voor fluojasjes voor L1 en L4
+    - Uit budget van huis van het kind: fluostrips voor kleuters.
+-
+  - Tweede luik:
+    - Een aantal projecten waaruit scholen kunnen kiezen. (VB: lessen EHBO, verkeersveiligheid, ... )
+    - 15K hiervoor voorzien, verdeeld a rato van aantal leerlingen.
+    - *Bedenking: moet er geen soort definitie zijn?*
+    - Facturen moeten doorgegeven worden aan de stad.
+    -
+  - Derde luik: 20K voor leerlingenaantallen * 0KI-indicator. (forfaitair...)
+    - DOEL: Sociaal engagement.
+
+-
+  - Vierde luik 35K
+    - Transport -> Op basis van afstand tot infrastructuur.
+    - ## Transport & gebruik van stedelijke infrastructuur.
+      - Cultuur (verschillende oplijsten) met aantal kinderen die komen
+      - zwembad (verschillende oplijsten) met aantal kinderen die komen zwemmen.
+      - Sporthallen (met aantal kinderen die komen sporten).
+      - Bibliotheek (verschillende oplijsten) met aantal kinderen die komen
+      - Minimum 1 kilometer.
+    - DOEL: transport tegemoetkoming aan de afstanden.
+  - Vijfde luik
+    - Middagtoezicht 35K
+    - Basis leerlingenaantallen.
+    - **DOEL:** Niet duurder dan 1,20 euro per begonnen halfuur -> 2,40 voor ons.
+
+# Formalisering van de samenwerking tussen stad en scholen.

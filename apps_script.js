@@ -1,140 +1,559 @@
 /**
- * In dit bestand staat de Google Apps Script code die ervoor zorgt dat de data uit de Google Sheet wordt opgehaald en als JSON wordt geretourneerd wanneer de web-app URL wordt bezocht.
- * Daarnaast wordt er gelogd wanneer de web-app wordt bezocht, inclusief eventuele parameters en de user agent.
- * 
- * De data wordt opgehaald uit de sheet 'APP_DATA', waarbij de opmerking uit cel A1 wordt meegenomen en de scholen worden gestructureerd op basis van het instellingsnummer.
- * De afstanden worden gecontroleerd en indien nodig omgezet naar null als ze niet geldig zijn.
- * Kolom L bevat het cumulatieve bezoekersaantal voor het zwembad; kolom M bevat het cumulatieve bezoekersaantal voor de sportinfrastructuur.
- * 
- * De logging wordt opgeslagen in een aparte sheet 'LOG', waarbij elke aanroep wordt gelogd met een timestamp, parameters en user agent.
+ * GOOGLE APPS SCRIPT — brongegevens subsidiereglement Stad Tielt
+ * ==============================================================
+ *
+ * Dit script hangt aan de Google Sheet en doet drie dingen:
+ *
+ *   1. doGet()                  publiceert de sheet als JSON voor de rekentool
+ *   2. vulAfstandenAan()        berekent ontbrekende afstanden via Google Maps
+ *   3. synchroniseerTabbladen() houdt de matrices in lijn met de lijsten
+ *
+ * SHEETSTRUCTUUR
+ * --------------
+ * De structuur is bewust generiek: het script kent geen enkel gegeven bij naam.
+ * Een kolom bijzetten in GEGEVENS of een rij in INFRASTRUCTUUR volstaat om een
+ * nieuw gegeven of een nieuwe locatie in de rekentool te krijgen.
+ *
+ *   META            sleutel | waarde                (o.a. 'opmerkingen')
+ *   VESTIGINGEN     sleutel | instellingsnummer | schoolnaam | vestiging |
+ *                   adres | postcode | gemeente | deelgemeente
+ *   GEGEVENS        sleutel | school | <veldnaam> | <veldnaam> | ...
+ *                   Kolomkoppen zijn de veldnamen uit js/config.js:
+ *                   lln, schooleters, lln_l1, lln_l4, oki, projectbedrag
+ *   INFRASTRUCTUUR  id | naam | type | adres
+ *   AFSTANDEN       sleutel | school | <infra-id> | ...   waarden in km
+ *   BEZOEKEN        sleutel | school | <infra-id> | ...   aantal kinderen
+ *   LOG             timestamp | parameters | user agent
+ *
+ * De kolom 'sleutel' koppelt de tabbladen aan elkaar en wordt automatisch
+ * ingevuld door synchroniseerTabbladen(). Hernoem hem niet.
+ *
+ * De kolom 'school' ernaast is er enkel om te kunnen zien welke rij je invult.
+ * Ze bevat een formule die de naam uit VESTIGINGEN haalt, wordt genegeerd bij
+ * het uitlezen, en hoef je nooit met de hand bij te werken.
  */
 
+var TAB_META = 'META';
+var TAB_VESTIGINGEN = 'VESTIGINGEN';
+var TAB_GEGEVENS = 'GEGEVENS';
+var TAB_INFRASTRUCTUUR = 'INFRASTRUCTUUR';
+var TAB_AFSTANDEN = 'AFSTANDEN';
+var TAB_BEZOEKEN = 'BEZOEKEN';
+var TAB_LOG = 'LOG';
+var TAB_OUD = 'APP_DATA';
 
-/**
- * De doGet functie wordt aangeroepen wanneer de web-app URL wordt bezocht.
- * Hier wordt de logging geactiveerd en de data geretourneerd.
- */
-function doGet(e) {
-  // 1. Log het gebruik
-  logUsage(e);
-  
-  // 2. Haal de data op
-  const data = getSchoolsData(); 
-  const json = JSON.stringify(data);
-  const callback = e && e.parameter && e.parameter.callback ? String(e.parameter.callback).trim() : "";
+// Puur ter herkenning in de sheet; nooit als gegeven ingelezen.
+var KOLOM_LABEL = 'school';
 
-  // JSONP ondersteuning voor browsers waar fetch door CORS geblokkeerd wordt.
-  if (callback && /^[A-Za-z_$][0-9A-Za-z_$]*(\.[A-Za-z_$][0-9A-Za-z_$]*)*$/.test(callback)) {
-    return ContentService.createTextOutput(callback + "(" + json + ");")
-      .setMimeType(ContentService.MimeType.JAVASCRIPT);
-  }
-  
-  // 3. Retourneer de JSON
-  return ContentService.createTextOutput(json)
-    .setMimeType(ContentService.MimeType.JSON);
+/* ================================================================== */
+/* Menu                                                                */
+/* ================================================================== */
+
+function onOpen() {
+  SpreadsheetApp.getUi()
+    .createMenu('Subsidietool')
+    .addItem('Tabbladen aanmaken', 'maakTabbladen')
+    .addItem('Tabbladen synchroniseren', 'synchroniseerTabbladen')
+    .addItem('Ontbrekende afstanden berekenen', 'vulAfstandenAan')
+    .addSeparator()
+    .addItem('Eenmalig: migreren van APP_DATA', 'migreerVanAppData')
+    .addToUi();
 }
 
-/**
- * Haalt de data op uit 'APP_DATA', inclusief opmerking en cumulatieve bezoekersaantallen.
- */
-function getSchoolsData() {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
-  const sheet = ss.getSheetByName("APP_DATA");
-  
-  // Haal de opmerking op uit cel A1
-  const opmerking = sheet.getRange("A1").getValue();
+/* ================================================================== */
+/* Lezen                                                               */
+/* ================================================================== */
 
-  const lastRow = sheet.getLastRow();
-  // We halen 13 kolommen op (t/m kolom M voor cumulatief bezoekersaantal sportinfrastructuur)
-  const data = sheet.getRange(1, 1, lastRow, 13).getValues();
-  
-  const result = {
-    metadata: {
-      opmerkingen: opmerking,
+function blad(naam) {
+  return SpreadsheetApp.getActiveSpreadsheet().getSheetByName(naam);
+}
+
+/** Leest een tabblad als lijst van objecten, met rij 1 als kolomkoppen. */
+function leesTabel(naam) {
+  var sheet = blad(naam);
+  if (!sheet) return { koppen: [], rijen: [] };
+
+  var waarden = sheet.getDataRange().getValues();
+  if (waarden.length < 2) return { koppen: (waarden[0] || []).map(normaliseerKop), rijen: [] };
+
+  var koppen = waarden[0].map(normaliseerKop);
+  var rijen = [];
+
+  for (var i = 1; i < waarden.length; i++) {
+    var rij = {};
+    var leeg = true;
+    for (var k = 0; k < koppen.length; k++) {
+      if (!koppen[k]) continue;
+      var waarde = waarden[i][k];
+      rij[koppen[k]] = waarde;
+      if (waarde !== '' && waarde !== null) leeg = false;
+    }
+    if (!leeg) rijen.push(rij);
+  }
+  return { koppen: koppen, rijen: rijen };
+}
+
+function normaliseerKop(waarde) {
+  return String(waarde === null || waarde === undefined ? '' : waarde).trim();
+}
+
+function getalOfNull(waarde) {
+  if (waarde === '' || waarde === null || waarde === undefined) return null;
+  var n = Number(waarde);
+  return isFinite(n) ? n : null;
+}
+
+function tekst(waarde) {
+  return String(waarde === null || waarde === undefined ? '' : waarde).trim();
+}
+
+/* ================================================================== */
+/* JSON-uitvoer                                                        */
+/* ================================================================== */
+
+/**
+ * Bouwt de payload die js/data.js verwacht. Alle kolomkoppen worden
+ * doorgegeven zoals ze in de sheet staan; de rekentool pikt eruit wat ze kent.
+ */
+function bouwPayload() {
+  var meta = leesTabel(TAB_META);
+  var opmerkingen = '';
+  meta.rijen.forEach(function (rij) {
+    if (tekst(rij.sleutel).toLowerCase() === 'opmerkingen') opmerkingen = tekst(rij.waarde);
+  });
+
+  var infraTabel = leesTabel(TAB_INFRASTRUCTUUR);
+  var infrastructuur = infraTabel.rijen
+    .filter(function (rij) { return tekst(rij.id) !== ''; })
+    .map(function (rij) {
+      return {
+        id: tekst(rij.id),
+        naam: tekst(rij.naam) || tekst(rij.id),
+        type: tekst(rij.type) || 'overig',
+        adres: tekst(rij.adres)
+      };
+    });
+
+  var gegevensTabel = leesTabel(TAB_GEGEVENS);
+  var gegevensPerSleutel = {};
+  gegevensTabel.rijen.forEach(function (rij) {
+    var waarden = {};
+    gegevensTabel.koppen.forEach(function (kop) {
+      if (!kop || kop === 'sleutel' || kop === KOLOM_LABEL) return;
+      waarden[kop] = getalOfNull(rij[kop]);
+    });
+    gegevensPerSleutel[tekst(rij.sleutel)] = waarden;
+  });
+
+  var afstandenPerSleutel = leesMatrix(TAB_AFSTANDEN);
+  var bezoekenPerSleutel = leesMatrix(TAB_BEZOEKEN);
+
+  var vestigingen = leesTabel(TAB_VESTIGINGEN).rijen
+    .filter(function (rij) { return tekst(rij.sleutel) !== ''; })
+    .map(function (rij) {
+      var sleutel = tekst(rij.sleutel);
+      return {
+        instellingsnummer: tekst(rij.instellingsnummer),
+        schoolNaam: tekst(rij.schoolnaam),
+        vestigingNaam: tekst(rij.vestiging) || tekst(rij.adres),
+        adres: tekst(rij.adres),
+        postcode: tekst(rij.postcode),
+        gemeente: tekst(rij.gemeente),
+        deelgemeente: tekst(rij.deelgemeente),
+        gegevens: gegevensPerSleutel[sleutel] || {},
+        afstanden: afstandenPerSleutel[sleutel] || {},
+        bezoeken: bezoekenPerSleutel[sleutel] || {}
+      };
+    });
+
+  return {
+    meta: {
+      opmerkingen: opmerkingen,
       gegenereerd_op: new Date().toISOString()
     },
-    scholen: {}
+    infrastructuur: infrastructuur,
+    vestigingen: vestigingen
   };
-
-  // Loop door de data vanaf rij 4
-  for (let i = 3; i < data.length; i++) {
-    const row = data[i];
-    
-    let rawId = row[1].toString().trim();
-    if (!rawId) continue;
-    
-    // Formatteer instellingsnummer naar 6 tekens
-    const instellingsnummer = rawId.padStart(6, '0');
-
-    const schoolnaam = row[0];
-    const adres = row[2];
-    const aantalLeerlingen = row[9] || 0;
-    const aantalSchooleters = row[10] || 0;
-    const cumulatiefZwembad = row[11] || 0;
-    const cumulatiefSportinfrastructuur = row[12] || 0;
-    
-    const afstandZwemmen = distanceCheck(row[3], row[4]);
-    const afstandCC = distanceCheck(row[5], row[6]);
-    const afstandBib = distanceCheck(row[7], row[8]);
-
-    const vestigingData = {
-      schoolnaam: schoolnaam,
-      adres: adres,
-      leerlingen: aantalLeerlingen,
-      schooleters: aantalSchooleters,
-      zwembad_bezoekers: cumulatiefZwembad,
-      sportinfrastructuur_bezoekers: cumulatiefSportinfrastructuur,
-      zwemmers: cumulatiefZwembad,
-      afstanden: {
-        zwemmen_min: isFinite(afstandZwemmen) ? afstandZwemmen : null,
-        cc_min: isFinite(afstandCC) ? afstandCC : null,
-        bib_min: isFinite(afstandBib) ? afstandBib : null
-      }
-    };
-
-    if (!result.scholen[instellingsnummer]) {
-      result.scholen[instellingsnummer] = [vestigingData];
-    } else {
-      result.scholen[instellingsnummer].push(vestigingData);
-    }
-  }
-  return result;
 }
 
-/**
- * Logt het tijdstip en eventuele parameters van de aanroep in de sheet 'LOG'.
- */
-function logUsage(e) {
+/** Leest een matrixtabblad (rij 1 = infra-ids, kolom A = vestigingssleutel). */
+function leesMatrix(naam) {
+  var tabel = leesTabel(naam);
+  var resultaat = {};
+  tabel.rijen.forEach(function (rij) {
+    var waarden = {};
+    tabel.koppen.forEach(function (kop) {
+      if (!kop || kop === 'sleutel' || kop === KOLOM_LABEL) return;
+      waarden[kop] = getalOfNull(rij[kop]);
+    });
+    resultaat[tekst(rij.sleutel)] = waarden;
+  });
+  return resultaat;
+}
+
+function doGet(e) {
+  logGebruik(e);
+
+  var json = JSON.stringify(bouwPayload());
+  var callback = e && e.parameter && e.parameter.callback ? String(e.parameter.callback).trim() : '';
+
+  // JSONP, voor browsers waar de gewone fetch op CORS strandt.
+  if (callback && /^[A-Za-z_$][0-9A-Za-z_$]*(\.[A-Za-z_$][0-9A-Za-z_$]*)*$/.test(callback)) {
+    return ContentService.createTextOutput(callback + '(' + json + ');')
+      .setMimeType(ContentService.MimeType.JAVASCRIPT);
+  }
+  return ContentService.createTextOutput(json).setMimeType(ContentService.MimeType.JSON);
+}
+
+function logGebruik(e) {
   try {
-    const ss = SpreadsheetApp.getActiveSpreadsheet();
-    let logSheet = ss.getSheetByName("LOG");
-    
-    // Maak de LOG sheet aan als deze nog niet bestaat
-    if (!logSheet) {
-      logSheet = ss.insertSheet("LOG");
-      logSheet.appendRow(["Timestamp", "Parameters", "User Agent"]);
+    var sheet = blad(TAB_LOG);
+    if (!sheet) {
+      sheet = SpreadsheetApp.getActiveSpreadsheet().insertSheet(TAB_LOG);
+      sheet.appendRow(['Timestamp', 'Parameters', 'User agent']);
+      sheet.hideSheet();
     }
-
-    // Haal parameters op uit het event object 'e'
-    const params = e && e.parameter ? JSON.stringify(e.parameter) : "Geen parameters";
-    const userAgent = e && e.context && e.context.userAgent ? e.context.userAgent : "Onbekend";
-
-    // Voeg een rij toe aan de log
-    logSheet.appendRow([new Date(), params, userAgent]);
-  } catch (err) {
-    console.error("Logging mislukt: " + err.toString());
+    sheet.appendRow([
+      new Date(),
+      e && e.parameter ? JSON.stringify(e.parameter) : 'geen parameters',
+      e && e.context && e.context.userAgent ? e.context.userAgent : 'onbekend'
+    ]);
+  } catch (fout) {
+    console.error('Loggen mislukt: ' + fout);
   }
 }
 
+/* ================================================================== */
+/* Tabbladen aanmaken en synchroniseren                                */
+/* ================================================================== */
+
+function zorgVoorTabblad(naam, koppen) {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName(naam);
+  if (!sheet) {
+    sheet = ss.insertSheet(naam);
+    sheet.getRange(1, 1, 1, koppen.length).setValues([koppen]);
+    sheet.getRange(1, 1, 1, koppen.length).setFontWeight('bold');
+    sheet.setFrozenRows(1);
+    sheet.setFrozenColumns(1);
+  }
+  return sheet;
+}
+
+function zorgVoorAlleTabbladen() {
+  zorgVoorTabblad(TAB_META, ['sleutel', 'waarde']);
+  zorgVoorTabblad(TAB_VESTIGINGEN, ['sleutel', 'instellingsnummer', 'schoolnaam', 'vestiging', 'adres', 'postcode', 'gemeente', 'deelgemeente']);
+  zorgVoorTabblad(TAB_GEGEVENS, ['sleutel', KOLOM_LABEL, 'lln', 'schooleters', 'lln_l1', 'lln_l4', 'oki', 'projectbedrag']);
+  zorgVoorTabblad(TAB_INFRASTRUCTUUR, ['id', 'naam', 'type', 'adres']);
+  zorgVoorTabblad(TAB_AFSTANDEN, ['sleutel', KOLOM_LABEL]);
+  zorgVoorTabblad(TAB_BEZOEKEN, ['sleutel', KOLOM_LABEL]);
+}
+
+function maakTabbladen() {
+  zorgVoorAlleTabbladen();
+  SpreadsheetApp.getUi().alert('Tabbladen klaar. Vul VESTIGINGEN en INFRASTRUCTUUR aan en kies daarna "Tabbladen synchroniseren".');
+}
+
 /**
- * Hulpfunctie om de kleinste afstand te bepalen.
+ * Zorgt dat elke vestiging een rij heeft in GEGEVENS, AFSTANDEN en BEZOEKEN,
+ * en dat elke infrastructuur een kolom heeft in AFSTANDEN en BEZOEKEN.
+ * Bestaande waarden blijven staan; er wordt enkel bijgezet.
  */
-function distanceCheck(val1, val2) {
-  const parseDist = (val) => {
-    const num = parseFloat(val);
-    return (isNaN(num) || num === 99999) ? Infinity : num;
+function synchroniseerTabbladen() {
+  var vestigingen = leesTabel(TAB_VESTIGINGEN).rijen;
+  var sleutels = vestigingen.map(function (v) { return tekst(v.sleutel); }).filter(String);
+
+  var infraIds = leesTabel(TAB_INFRASTRUCTUUR).rijen
+    .map(function (i) { return tekst(i.id); })
+    .filter(String);
+
+  var toegevoegd = [];
+  toegevoegd.push(vulRijenAan(TAB_GEGEVENS, sleutels) + ' rijen in GEGEVENS');
+  toegevoegd.push(vulKolommenAan(TAB_AFSTANDEN, infraIds) + ' kolommen in AFSTANDEN');
+  toegevoegd.push(vulRijenAan(TAB_AFSTANDEN, sleutels) + ' rijen in AFSTANDEN');
+  toegevoegd.push(vulKolommenAan(TAB_BEZOEKEN, infraIds) + ' kolommen in BEZOEKEN');
+  toegevoegd.push(vulRijenAan(TAB_BEZOEKEN, sleutels) + ' rijen in BEZOEKEN');
+
+  [TAB_GEGEVENS, TAB_AFSTANDEN, TAB_BEZOEKEN].forEach(vulLabelsAan);
+
+  SpreadsheetApp.getUi().alert('Gesynchroniseerd.\n\nToegevoegd: ' + toegevoegd.join(', ') + '.');
+}
+
+/**
+ * Zet naast de sleutelkolom een leesbare kolom 'school' met de schoolnaam en de
+ * vestiging. Het is een formule die naar VESTIGINGEN wijst, zodat een naam die
+ * daar wijzigt hier vanzelf mee verandert. De rekentool negeert deze kolom.
+ */
+function vulLabelsAan(naam) {
+  var sheet = blad(naam);
+  if (!sheet) return;
+
+  var koppen = sheet.getRange(1, 1, 1, Math.max(1, sheet.getLastColumn()))
+    .getValues()[0].map(normaliseerKop);
+  var positie = koppen.indexOf(KOLOM_LABEL);
+
+  if (positie === -1) {
+    sheet.insertColumnAfter(1);
+    sheet.getRange(1, 2).setValue(KOLOM_LABEL).setFontWeight('bold');
+  } else if (positie !== 1) {
+    // Iemand heeft de kolom verplaatst; dan laten we ze met rust.
+    return;
+  }
+
+  var laatsteRij = sheet.getLastRow();
+  if (laatsteRij < 2) return;
+
+  var formules = [];
+  for (var r = 2; r <= laatsteRij; r++) {
+    formules.push(['=IFERROR(VLOOKUP($A' + r + ',' + TAB_VESTIGINGEN + '!$A:$D,3,FALSE)' +
+      '&" - "&VLOOKUP($A' + r + ',' + TAB_VESTIGINGEN + '!$A:$D,4,FALSE),"")']);
+  }
+  sheet.getRange(2, 2, formules.length, 1).setFormulas(formules);
+  sheet.setFrozenColumns(2);
+}
+
+function vulRijenAan(naam, sleutels) {
+  var sheet = blad(naam);
+  if (!sheet) return 0;
+
+  var bestaand = {};
+  var laatsteRij = sheet.getLastRow();
+  if (laatsteRij > 1) {
+    sheet.getRange(2, 1, laatsteRij - 1, 1).getValues().forEach(function (rij) {
+      bestaand[tekst(rij[0])] = true;
+    });
+  }
+
+  var nieuw = sleutels.filter(function (s) { return !bestaand[s]; });
+  if (nieuw.length === 0) return 0;
+
+  sheet.getRange(sheet.getLastRow() + 1, 1, nieuw.length, 1)
+    .setValues(nieuw.map(function (s) { return [s]; }));
+  return nieuw.length;
+}
+
+function vulKolommenAan(naam, ids) {
+  var sheet = blad(naam);
+  if (!sheet) return 0;
+
+  var laatsteKolom = Math.max(1, sheet.getLastColumn());
+  var koppen = sheet.getRange(1, 1, 1, laatsteKolom).getValues()[0].map(normaliseerKop);
+
+  var nieuw = ids.filter(function (id) { return koppen.indexOf(id) === -1; });
+  if (nieuw.length === 0) return 0;
+
+  sheet.getRange(1, laatsteKolom + 1, 1, nieuw.length).setValues([nieuw]).setFontWeight('bold');
+  return nieuw.length;
+}
+
+/* ================================================================== */
+/* Afstanden berekenen                                                 */
+/* ================================================================== */
+
+/**
+ * Vult elke lege cel in AFSTANDEN met de rijafstand over de weg, in kilometer.
+ * Reeds ingevulde cellen worden niet overschreven, zodat handmatige correcties
+ * blijven staan. De Maps-dienst van Apps Script heeft een dagquotum: bij een
+ * grote sheet kan het nodig zijn de actie een tweede keer te draaien.
+ */
+function vulAfstandenAan() {
+  var sheet = blad(TAB_AFSTANDEN);
+  if (!sheet) throw new Error('Tabblad AFSTANDEN bestaat niet. Kies eerst "Tabbladen aanmaken".');
+
+  var adresPerSleutel = {};
+  leesTabel(TAB_VESTIGINGEN).rijen.forEach(function (rij) {
+    adresPerSleutel[tekst(rij.sleutel)] = tekst(rij.adres);
+  });
+
+  var adresPerInfra = {};
+  leesTabel(TAB_INFRASTRUCTUUR).rijen.forEach(function (rij) {
+    adresPerInfra[tekst(rij.id)] = tekst(rij.adres);
+  });
+
+  var waarden = sheet.getDataRange().getValues();
+  if (waarden.length < 2) return;
+
+  var koppen = waarden[0].map(normaliseerKop);
+  var berekend = 0;
+  var mislukt = [];
+  var overgeslagen = 0;
+
+  for (var r = 1; r < waarden.length; r++) {
+    var sleutel = tekst(waarden[r][0]);
+    var vanAdres = adresPerSleutel[sleutel];
+    if (!sleutel || !vanAdres) continue;
+
+    for (var k = 1; k < koppen.length; k++) {
+      var infraId = koppen[k];
+      if (!infraId || infraId === KOLOM_LABEL) continue;
+      if (waarden[r][k] !== '' && waarden[r][k] !== null) continue;
+
+      var naarAdres = adresPerInfra[infraId];
+      if (!naarAdres) { overgeslagen++; continue; }
+
+      var km = berekenAfstandKm(vanAdres, naarAdres);
+      if (km === null) {
+        mislukt.push(sleutel + ' -> ' + infraId);
+      } else {
+        // Cel per cel schrijven: het hele bereik terugschrijven zou de formules
+        // in de kolom 'school' vervangen door hun huidige tekst.
+        sheet.getRange(r + 1, k + 1).setValue(km);
+        berekend++;
+      }
+      Utilities.sleep(200);
+    }
+  }
+
+  var bericht = berekend + ' afstand(en) berekend.';
+  if (overgeslagen > 0) bericht += '\n' + overgeslagen + ' cel(len) overgeslagen: die infrastructuur heeft nog geen adres.';
+  if (mislukt.length > 0) bericht += '\nNiet gelukt: ' + mislukt.join(', ');
+  SpreadsheetApp.getUi().alert(bericht);
+}
+
+function berekenAfstandKm(vanAdres, naarAdres) {
+  try {
+    var route = Maps.newDirectionFinder()
+      .setOrigin(vanAdres)
+      .setDestination(naarAdres)
+      .setMode(Maps.DirectionFinder.Mode.DRIVING)
+      .getDirections();
+
+    if (!route || !route.routes || route.routes.length === 0) return null;
+    var meters = route.routes[0].legs[0].distance.value;
+    return Math.round(meters / 10) / 100;
+  } catch (fout) {
+    console.error('Afstand ' + vanAdres + ' -> ' + naarAdres + ' mislukt: ' + fout);
+    return null;
+  }
+}
+
+/* ================================================================== */
+/* Eenmalige migratie van de oude APP_DATA-structuur                   */
+/* ================================================================== */
+
+/**
+ * Zet de oude, brede APP_DATA om naar de nieuwe tabbladen. Draai dit één keer;
+ * daarna is APP_DATA overbodig en kan het verborgen of bewaard blijven als
+ * archief.
+ */
+function migreerVanAppData() {
+  var oud = blad(TAB_OUD);
+  if (!oud) throw new Error('Tabblad ' + TAB_OUD + ' niet gevonden.');
+
+  // Een tweede migratie zou alle rijen verdubbelen. Liever weigeren dan de
+  // brongegevens stukmaken.
+  var bestaande = leesTabel(TAB_VESTIGINGEN).rijen;
+  if (bestaande.length > 0) {
+    SpreadsheetApp.getUi().alert(
+      'VESTIGINGEN bevat al ' + bestaande.length + ' rijen. De migratie is blijkbaar al gedraaid.\n\n' +
+      'Wil je echt opnieuw migreren, maak dan eerst de tabbladen VESTIGINGEN, GEGEVENS, ' +
+      'AFSTANDEN, BEZOEKEN, INFRASTRUCTUUR en META leeg (of verwijder ze).'
+    );
+    return;
+  }
+
+  // De oude sheet had de infrastructuur als vaste kolommen D t/m I, met het
+  // adres in rij 1 en de naam in rij 3.
+  var kolomNaarInfra = {
+    3: 'zwembad_meulebeke', 4: 'zwembad_tielt',
+    5: 'cc_meulebeke', 6: 'cc_tielt',
+    7: 'bib_meulebeke', 8: 'bib_tielt'
   };
-  const d1 = parseDist(val1);
-  const d2 = parseDist(val2);
-  return Math.min(d1, d2);
+  // Tielt en Meulebeke zijn gefusioneerd: de gemeente is overal Tielt, de
+  // postcode bepaalt enkel nog de deelgemeente.
+  var deelgemeentePerPostcode = { '8700': 'Tielt', '8760': 'Meulebeke' };
+
+  var waarden = oud.getDataRange().getValues();
+  zorgVoorAlleTabbladen();
+
+  var infraRijen = [];
+  for (var kolom in kolomNaarInfra) {
+    infraRijen.push([
+      kolomNaarInfra[kolom],
+      tekst(waarden[2][kolom]),
+      tekst(waarden[2][kolom]).toLowerCase().indexOf('zwembad') === 0 ? 'zwembad'
+        : tekst(waarden[2][kolom]).toLowerCase().indexOf('bib') === 0 ? 'bibliotheek' : 'cultuur',
+      tekst(waarden[0][kolom])
+    ]);
+  }
+  infraRijen.push(['sporthal_tielt', 'Sporthal Tielt', 'sport', '']);
+  schrijfOnder(TAB_INFRASTRUCTUUR, infraRijen);
+
+  var vestigingRijen = [];
+  var gegevensRijen = [];
+  var afstandRijen = [];
+  var bezoekRijen = [];
+  var teller = {};
+
+  for (var r = 3; r < waarden.length; r++) {
+    var ruwNummer = tekst(waarden[r][1]);
+    if (!ruwNummer) continue;
+
+    var instellingsnummer = ('000000' + String(Math.round(Number(ruwNummer)))).slice(-6);
+    teller[instellingsnummer] = (teller[instellingsnummer] || 0) + 1;
+    var sleutel = instellingsnummer + '-' + teller[instellingsnummer];
+
+    var adres = tekst(waarden[r][2]);
+    var postcode = (adres.match(/\b(\d{4})\b/) || [])[1] || '';
+
+    vestigingRijen.push([sleutel, instellingsnummer, tekst(waarden[r][0]), adres, adres,
+      postcode, 'Tielt', deelgemeentePerPostcode[postcode] || '']);
+
+    // lln | schooleters | lln_l1 | lln_l4 | oki | projectbedrag
+    gegevensRijen.push([sleutel, '', getalOfNull(waarden[r][9]), getalOfNull(waarden[r][10]), '', '', '', '']);
+
+    var afstandRij = [sleutel, ''];
+    var dichtstbijZwembad = null;
+    var kleinsteAfstand = Infinity;
+
+    infraRijen.forEach(function (infra, index) {
+      var kolom = null;
+      for (var k in kolomNaarInfra) { if (kolomNaarInfra[k] === infra[0]) kolom = Number(k); }
+      if (kolom === null) { afstandRij.push(''); return; }
+
+      var km = getalOfNull(waarden[r][kolom]);
+      if (km === null || km >= 99999) { afstandRij.push(''); return; }
+      afstandRij.push(km);
+      if (infra[2] === 'zwembad' && km < kleinsteAfstand) { kleinsteAfstand = km; dichtstbijZwembad = infra[0]; }
+    });
+    afstandRijen.push(afstandRij);
+
+    // De oude sheet kende maar twee cumulatieve bezoekersaantallen: kolom L
+    // voor het zwembad en kolom M voor de sportinfrastructuur.
+    var bezoekRij = [sleutel, ''];
+    infraRijen.forEach(function (infra) {
+      if (infra[0] === dichtstbijZwembad) bezoekRij.push(getalOfNull(waarden[r][11]));
+      else if (infra[0] === 'sporthal_tielt') bezoekRij.push(getalOfNull(waarden[r][12]));
+      else bezoekRij.push('');
+    });
+    bezoekRijen.push(bezoekRij);
+  }
+
+  schrijfOnder(TAB_VESTIGINGEN, vestigingRijen);
+  schrijfOnder(TAB_GEGEVENS, gegevensRijen);
+  vulKolommenAan(TAB_AFSTANDEN, infraRijen.map(function (i) { return i[0]; }));
+  vulKolommenAan(TAB_BEZOEKEN, infraRijen.map(function (i) { return i[0]; }));
+  schrijfOnder(TAB_AFSTANDEN, afstandRijen);
+  schrijfOnder(TAB_BEZOEKEN, bezoekRijen);
+  schrijfOnder(TAB_META, [['opmerkingen', tekst(waarden[0][0])]]);
+
+  [TAB_GEGEVENS, TAB_AFSTANDEN, TAB_BEZOEKEN].forEach(vulLabelsAan);
+
+  SpreadsheetApp.getUi().alert(
+    'Migratie klaar: ' + vestigingRijen.length + ' vestigingen, ' + infraRijen.length + ' infrastructuren.\n\n' +
+    'Nog aan te vullen: lln_l1, lln_l4 en oki in GEGEVENS, de bezoekersaantallen voor cultuurcentrum ' +
+    'en bibliotheek, en het adres van de sporthal (kies daarna "Ontbrekende afstanden berekenen").'
+  );
+}
+
+function schrijfOnder(naam, rijen) {
+  if (!rijen.length) return;
+  var sheet = blad(naam);
+  var breedte = Math.max.apply(null, rijen.map(function (r) { return r.length; }));
+  var genormaliseerd = rijen.map(function (r) {
+    var kopie = r.slice();
+    while (kopie.length < breedte) kopie.push('');
+    return kopie;
+  });
+  sheet.getRange(sheet.getLastRow() + 1, 1, genormaliseerd.length, breedte).setValues(genormaliseerd);
 }
