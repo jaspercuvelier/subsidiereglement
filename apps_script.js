@@ -305,8 +305,8 @@ function vulLabelsAan(naam) {
 
   var formules = [];
   for (var r = 2; r <= laatsteRij; r++) {
-    formules.push(['=IFERROR(VLOOKUP($A' + r + ',' + TAB_VESTIGINGEN + '!$A:$D,3,FALSE)' +
-      '&" - "&VLOOKUP($A' + r + ',' + TAB_VESTIGINGEN + '!$A:$D,4,FALSE),"")']);
+    formules.push(['=IFERROR(VLOOKUP($A' + r + ';' + TAB_VESTIGINGEN + '!$A:$D;3;FALSE)' +
+      '&" - "&VLOOKUP($A' + r + ';' + TAB_VESTIGINGEN + '!$A:$D;4;FALSE);"")']);
   }
   sheet.getRange(2, 2, formules.length, 1).setFormulas(formules);
   sheet.setFrozenColumns(2);
