@@ -183,5 +183,45 @@ check('Elke vestiging heeft een deelgemeente',
 check('Alle scholen delen mee in de verdeling',
       r.scholen.every(s => r.totaalPerSchool[s.sleutel] > 0));
 
+/* ---- Verdeling per vestiging -------------------------------------- */
+console.log('\n=== Verdeling per vestiging ===\n');
+vm.runInContext('globalThis.VERDEELEENHEID = VERDEELEENHEID;', context);
+check('De verdeeleenheid staat op vestiging', context.VERDEELEENHEID === 'vestiging');
+check('Elke vestiging is een eigen deelnemer', r.scholen.length === data.vestigingen.length);
+
+const perVestiging = JSON.parse(JSON.stringify(data));
+perVestiging.projecten = [{ id: 'ehbo', naam: 'Reanimatielessen', omschrijving: '' }];
+const amandus = perVestiging.vestigingen.filter(v => v.instellingsnummer === '110478');
+check('Sint-Amandus heeft twee vestigingen in de snapshot', amandus.length === 2);
+amandus[0].projecten = { ehbo: 300 };
+amandus[1].projecten = { ehbo: 700 };
+const pv = context.Engine.bereken(perVestiging, instellingen);
+const pvAmandus = pv.scholen.filter(s => s.instellingsnummer === '110478');
+check('Twee vestigingen van één school krijgen elk een eigen bedrag', pvAmandus.length === 2);
+check('De projectfacturen blijven bij hun eigen vestiging',
+      pvAmandus.map(s => s.projectenTotaal).sort((a, b) => a - b).join() === '300,700');
+check('De vestigingen van één school kennen elkaar',
+      pvAmandus.every(s => s.zusters.length === 1 && pvAmandus.some(a => a.sleutel === s.zusters[0])));
+check('Een vestiging zonder zusters heeft er geen',
+      pv.scholen.filter(s => s.instellingsnummer !== '110478' && s.instellingsnummer !== '020347').every(s => s.zusters.length === 0));
+
+// Per school samengeteld moet hetzelfde totaal opleveren als de som van de
+// vestigingen, zolang er geen drempel of plafond tussen zit.
+const perSchool = context.Engine.groepeerScholen(pv.vestigingen, 'school');
+check('Per school worden de vestigingen weer samengeteld',
+      perSchool.length === new Set(data.vestigingen.map(v => v.instellingsnummer)).size);
+const middag = pv.luiken.find(l => l.luik.id === 'middag');
+const amandusSchool = perSchool.find(s => s.instellingsnummer === '110478');
+check('Luik 5 per vestiging telt op tot het aandeel van de hele school',
+      Math.abs(pvAmandus.reduce((t, s) => t + middag.perSchool[s.sleutel].bedrag, 0)
+        - middag.budget * amandusSchool.gegevens.lln / middag.totaleGrondslag) < 0.02);
+
+// De sleutel uit de sheet heeft voorrang, zodat een vestiging na herladen
+// dezelfde deelnemer blijft, ook als haar naam wijzigt.
+const metSleutel = JSON.parse(JSON.stringify(data));
+metSleutel.vestigingen.forEach((v, i) => { v.sleutel = `s-${i}`; });
+check('De sleutel uit de sheet wordt de sleutel van de deelnemer',
+      context.Engine.bereken(metSleutel, instellingen).scholen.every((s, i) => s.sleutel === `s-${i}`));
+
 console.log(mislukt === 0 ? '\nAlle controles geslaagd.\n' : `\n${mislukt} controle(s) mislukt.\n`);
 process.exit(mislukt === 0 ? 0 : 1);

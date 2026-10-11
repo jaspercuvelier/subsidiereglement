@@ -99,21 +99,42 @@ const Engine = (function () {
   }
 
   /**
-   * Eén subsidie per instellingsnummer: vestigingen van dezelfde school worden
-   * samengeteld. Velden met optelbaar:false (zoals de OKI-factor) krijgen een
-   * gewogen gemiddelde op leerlingenaantal in plaats van een som.
+   * De sleutel van de deelnemer waartoe een vestiging hoort. Per vestiging is
+   * dat de sleutel uit de sheet (of, voor een oudere payload zonder sleutel,
+   * instellingsnummer plus vestigingsnaam), zodat ze stabiel blijft over het
+   * herladen heen. Per school is het het instellingsnummer.
    */
-  function groepeerScholen(vestigingen) {
+  function deelnemerSleutel(vestiging, eenheid) {
+    const nummer = (vestiging.instellingsnummer || '').trim();
+    if (eenheid === 'school') return nummer || `los-${vestiging.id}`;
+    return (vestiging.sleutel || '').trim()
+      || `${nummer || 'los'}|${vestiging.vestigingNaam || vestiging.adres || vestiging.id}`;
+  }
+
+  /**
+   * Bundelt de vestigingen tot de deelnemers van de verdeling. Volgens
+   * VERDEELEENHEID is dat elke vestiging apart, of één deelnemer per
+   * instellingsnummer met de vestigingen samengeteld. Velden met
+   * optelbaar:false (zoals de OKI-factor) krijgen bij het samentellen een
+   * gewogen gemiddelde op leerlingenaantal in plaats van een som.
+   *
+   * De deelnemers heten in de rest van de code "scholen" (perSchool,
+   * totaalPerSchool): dat bleef zo toen de verdeling per vestiging ging.
+   */
+  function groepeerScholen(vestigingen, eenheid = (typeof VERDEELEENHEID === 'string' ? VERDEELEENHEID : 'school')) {
     const groepen = new Map();
 
     vestigingen.forEach(vestiging => {
-      const sleutel = (vestiging.instellingsnummer || '').trim() || `los-${vestiging.id}`;
+      let sleutel = deelnemerSleutel(vestiging, eenheid);
+      // Twee vestigingen met dezelfde naam mogen nooit stilzwijgend samenvallen.
+      if (eenheid !== 'school' && groepen.has(sleutel)) sleutel = `${sleutel}#${vestiging.id}`;
 
       if (!groepen.has(sleutel)) {
         groepen.set(sleutel, {
           sleutel,
           instellingsnummer: vestiging.instellingsnummer || '',
           schoolNaam: vestiging.schoolNaam,
+          vestigingNaam: eenheid === 'school' ? '' : (vestiging.vestigingNaam || vestiging.adres || ''),
           gemeente: vestiging.gemeente || '',
           vestigingen: [],
           gegevens: {},
@@ -398,6 +419,14 @@ const Engine = (function () {
 
     const verrijkt = vestigingen.map(v => verrijkVestiging(v, ctx));
     const scholen = groepeerScholen(verrijkt);
+
+    // Bij een verdeling per vestiging: de vestigingen die samen één school
+    // vormen, zodat de weergave ook het totaal per instellingsnummer kan tonen.
+    scholen.forEach(deelnemer => {
+      deelnemer.zusters = scholen.filter(
+        ander => ander !== deelnemer && ander.instellingsnummer && ander.instellingsnummer === deelnemer.instellingsnummer
+      ).map(ander => ander.sleutel);
+    });
     const actieveLuiken = LUIKEN.filter(l => l.actief !== false);
 
     // Eerst de centrale luiken: hun saldo bepaalt mee de pot van de luiken

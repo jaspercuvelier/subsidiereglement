@@ -178,6 +178,7 @@ function bouwPayload() {
     .map(function (rij) {
       var sleutel = tekst(rij.sleutel);
       return {
+        sleutel: sleutel,
         instellingsnummer: tekst(rij.instellingsnummer),
         schoolNaam: tekst(rij.schoolnaam),
         vestigingNaam: tekst(rij.vestiging) || tekst(rij.adres),

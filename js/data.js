@@ -7,7 +7,7 @@
  *
  *   { meta, infrastructuur: [{id, naam, type, adres}],
  *     projecten: [{id, naam, omschrijving}],
- *     vestigingen: [{ id, instellingsnummer, schoolNaam, vestigingNaam, adres,
+ *     vestigingen: [{ id, sleutel, instellingsnummer, schoolNaam, vestigingNaam, adres,
  *                     postcode, gemeente,
  *                     gegevens:  { <veldkey>: getal|null },
  *                     afstanden: { <infraId>: km|null },
@@ -91,6 +91,8 @@ const Data = (function () {
 
       const vestiging = {
         id: volgendeId++,
+        // De sleutel uit VESTIGINGEN in de sheet; leeg bij een oudere snapshot.
+        sleutel: tekst(ruw.sleutel),
         instellingsnummer: tekst(ruw.instellingsnummer).padStart(6, '0'),
         schoolNaam: tekst(ruw.schoolNaam, 'Naamloze school'),
         vestigingNaam: tekst(ruw.vestigingNaam, adres),
@@ -216,6 +218,7 @@ const Data = (function () {
       infrastructuur: data.infrastructuur,
       projecten: data.projecten,
       vestigingen: data.vestigingen.map(v => ({
+        sleutel: v.sleutel,
         instellingsnummer: v.instellingsnummer,
         schoolNaam: v.schoolNaam,
         vestigingNaam: v.vestigingNaam,

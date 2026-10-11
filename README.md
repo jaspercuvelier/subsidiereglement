@@ -27,14 +27,34 @@ school. Het verschil met de gereserveerde €5.000 schuift door naar luik 2:
 blijft er €1.800 over, dan wordt de projectenpot €16.800; kost het €6.500, dan
 zakt ze naar €13.500. De enveloppe blijft in beide gevallen €110.000.
 
-### De projecten per school
+### Per vestiging
 
-Elke school heeft in luik 2 een eigen pot naar rato van haar leerlingenaantal.
+De werkgroep sprak af per vestiging te werken: elke rij in `VESTIGINGEN` krijgt
+een eigen bedrag per luik en een eigen projectenpot, ook als twee vestigingen
+hetzelfde instellingsnummer hebben. Klik in de tool op het totaal van zo'n
+vestiging, dan zie je ook de andere vestigingen en het totaal voor de hele
+school. Wil men ooit terug naar één bedrag per instellingsnummer, dan volstaat
+`VERDEELEENHEID = 'school'` in `js/config.js`.
+
+Een vestiging bijzetten:
+
+1. `VESTIGINGEN`: een nieuwe rij met een nieuwe sleutel (bv. `110478-2`), het
+   instellingsnummer van de school, schoolnaam, vestiging en adres.
+2. *Subsidietool → Tabbladen synchroniseren*: de rij verschijnt in `GEGEVENS`,
+   `AFSTANDEN`, `BEZOEKEN` en `PROJECTBEDRAGEN`.
+3. *Subsidietool → Ontbrekende afstanden berekenen*.
+4. Leerlingen, OKI, bezoekers en projectfacturen verdelen over de vestigingen.
+   Laat je de cijfers van de hele school bij één vestiging staan, dan krijgt
+   die vestiging alles en de nieuwe niets.
+
+### De projecten per vestiging
+
+Elke vestiging heeft in luik 2 een eigen pot naar rato van haar leerlingenaantal.
 De stad noteert de projectfacturen in de sheet: elk project is een kolom in
-`PROJECTBEDRAGEN`, met naam en korte omschrijving in `PROJECTEN`. De tool toont
-per school de pot, wat er al besteed is (met de facturen erachter) en wat er nog
-beschikbaar is, zodat een school kan aflezen dat ze bijvoorbeeld nog €200 heeft
-staan.
+`PROJECTBEDRAGEN`, met naam en korte omschrijving in `PROJECTEN`, en elke
+vestiging een rij. De tool toont per vestiging de pot, wat er al besteed is (met
+de facturen erachter) en wat er nog beschikbaar is, zodat een vestiging kan
+aflezen dat ze bijvoorbeeld nog €200 heeft staan.
 
 Zet je de instelling *Herverdeel onbenut projectbudget* aan, dan wordt de
 eindafrekening gemaakt: elke school wordt geplafonneerd op wat ze effectief
@@ -46,7 +66,7 @@ de scholen die hun eigen pot wél overschreden.
 ```
 index.html          markup, verder niets
 js/config.js        BELEID: velden, instellingen en de vijf luiken
-js/engine.js        rekenkern: groeperen, verdelen, afronden, databeschikbaarheid
+js/engine.js        rekenkern: deelnemers bepalen, verdelen, afronden, databeschikbaarheid
 js/data.js          ophalen en normaliseren (Apps Script-endpoint of snapshot)
 js/ui.js            tabellen, detailpaneel, reglementtekst
 data/2026.json      snapshot van de brongegevens

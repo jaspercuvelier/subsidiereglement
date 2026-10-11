@@ -53,6 +53,34 @@ const UI = (function () {
     return aantal.format(Number(waarde));
   }
 
+  // Wie een eigen bedrag krijgt: een vestiging of een school (zie VERDEELEENHEID).
+  const PER_SCHOOL = VERDEELEENHEID === 'school';
+  const EENHEID = PER_SCHOOL
+    ? { enkelvoud: 'school', meervoud: 'scholen', kop: 'School' }
+    : { enkelvoud: 'vestiging', meervoud: 'vestigingen', kop: 'Vestiging' };
+
+  /** Naam van een deelnemer in één regel, voor het detailpaneel. */
+  function deelnemerTitel(school) {
+    return [school.schoolNaam, school.vestigingNaam, school.instellingsnummer || 'geen nummer']
+      .filter(Boolean).join(' · ');
+  }
+
+  /** De naamcel van een deelnemer in de tabellen: school, en eronder vestiging en nummer. */
+  function deelnemerCel(school, extra = '') {
+    const onder = [
+      school.vestigingNaam,
+      school.instellingsnummer || 'geen nummer',
+      PER_SCHOOL && school.vestigingen.length > 1 ? `${school.vestigingen.length} vestigingen` : '',
+      extra
+    ].filter(Boolean).join(' · ');
+    return `<div class="font-medium text-slate-900">${esc(school.schoolNaam)}</div>
+            <div class="text-xs text-slate-400">${esc(onder)}</div>`;
+  }
+
+  function aantalScholen() {
+    return new Set(resultaat.scholen.map(s => s.instellingsnummer || s.sleutel)).size;
+  }
+
   function esc(waarde) {
     return String(waarde === null || waarde === undefined ? '' : waarde)
       .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
@@ -249,7 +277,7 @@ const UI = (function () {
     if (kolommen.length === 0) {
       return `<p class="p-6 text-sm leading-6 text-slate-500">
         Er zijn nog geen projecten. Voeg ze toe in de Google Sheet via
-        <em>Subsidietool → Project toevoegen</em>: dat maakt een kolom aan waar je per school
+        <em>Subsidietool → Project toevoegen</em>: dat maakt een kolom aan waar je per vestiging
         het factuurbedrag kan intypen, met een korte omschrijving erbij.
       </p>`;
     }
@@ -350,10 +378,7 @@ const UI = (function () {
 
       return `
         <tr>
-          <td class="px-3 py-3">
-            <div class="font-medium text-slate-900">${esc(school.schoolNaam)}</div>
-            <div class="text-xs text-slate-400">${esc(school.instellingsnummer || 'geen nummer')}${school.vestigingen.length > 1 ? ` · ${school.vestigingen.length} vestigingen` : ''}</div>
-          </td>
+          <td class="px-3 py-3">${deelnemerCel(school)}</td>
           <td class="px-3 py-3 text-right text-slate-600">${aantal.format(school.gegevens.lln)}</td>
           ${cellen}
           <td class="px-2 py-3 text-right font-bold text-emerald-700">${knop(totaalSleutel, resultaat.totaalPerSchool[school.sleutel], 'text-emerald-700')}</td>
@@ -371,7 +396,7 @@ const UI = (function () {
       <table class="min-w-full text-sm">
         <thead class="bg-slate-50 text-xs uppercase tracking-wider text-slate-500">
           <tr>
-            <th class="px-3 py-3 text-left font-medium">School</th>
+            <th class="px-3 py-3 text-left font-medium">${EENHEID.kop}</th>
             <th class="px-3 py-3 text-right font-medium">Lln</th>
             ${verdelend.map(r => `<th class="px-2 py-3 text-right font-medium">Luik ${r.luik.nummer}<div class="font-normal normal-case text-slate-400">${esc(r.luik.naam)}</div></th>`).join('')}
             <th class="px-2 py-3 text-right font-medium">Totaal</th>
@@ -380,7 +405,7 @@ const UI = (function () {
         <tbody class="divide-y divide-slate-200 bg-white">${rijen}</tbody>
         <tfoot class="bg-slate-100 font-semibold text-slate-800">
           <tr>
-            <td class="px-3 py-3">Totaal (${resultaat.scholen.length} scholen)</td>
+            <td class="px-3 py-3">Totaal (${resultaat.scholen.length} ${EENHEID.meervoud})</td>
             <td class="px-3 py-3 text-right">${aantal.format(resultaat.scholen.reduce((t, s) => t + s.gegevens.lln, 0))}</td>
             ${kolomTotalen}
             <td class="px-2 py-3 text-right text-lg text-emerald-700">${euro.format(resultaat.totaalVerdeeld)}</td>
@@ -394,8 +419,8 @@ const UI = (function () {
     el('resultaat-melding').innerHTML = restant > 0.005
       ? `<div class="rounded-md border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">
            ${euro.format(restant)} van de ${euro.format(resultaat.totaalBudget)} kon niet verdeeld worden.
-           Dat gebeurt wanneer geen enkele school een grondslag heeft voor een luik (bv. een ontbrekend gegeven),
-           of wanneer alle scholen hun plafond bereikt hebben.
+           Dat gebeurt wanneer geen enkele ${EENHEID.enkelvoud} een grondslag heeft voor een luik (bv. een ontbrekend gegeven),
+           of wanneer alle ${EENHEID.meervoud} hun plafond bereikt hebben.
          </div>`
       : '';
   }
@@ -505,7 +530,7 @@ const UI = (function () {
 
     const doelBalk = balk(
       `Luik ${doel.luik.nummer} · ${esc(doel.luik.naam)}`,
-      `${euro.format(doel.budget)} te verdelen over de scholen`,
+      `${euro.format(doel.budget)} te verdelen over de ${EENHEID.meervoud}`,
       deel(pot, schaal),
       doelSegmenten);
 
@@ -530,7 +555,7 @@ const UI = (function () {
         </div>
         <p class="mt-1 text-sm leading-6 text-slate-600">
           Luik ${r.luik.nummer} staat niet in de tabel hierboven: de stad koopt centraal aan en betaalt
-          de factuur zelf, er gaat dus geen euro rechtstreeks naar een school.
+          de factuur zelf, er gaat dus geen euro rechtstreeks naar een ${EENHEID.enkelvoud}.
           ${tekort
             ? `De factuur is ${euro.format(-r.saldo)} duurder dan de ${euro.format(r.budget)} die ervoor
                opzijgezet was, en dat tekort wordt van de pot van luik ${doel.luik.nummer} afgetrokken.`
@@ -539,7 +564,7 @@ const UI = (function () {
                  in het tabblad META van de sheet), dus schuift voorlopig de volledige
                  ${euro.format(r.budget)} door naar de pot van luik ${doel.luik.nummer}.`
               : `Wat er van de ${euro.format(r.budget)} overblijft, ${euro.format(r.saldo)}, gaat naar de pot
-                 van luik ${doel.luik.nummer} en wordt daar mee over de scholen verdeeld.`}
+                 van luik ${doel.luik.nummer} en wordt daar mee over de ${EENHEID.meervoud} verdeeld.`}
         </p>
 
         <div class="mt-4 space-y-4">
@@ -554,11 +579,11 @@ const UI = (function () {
   }
 
   /* ---------------------------------------------------------------- */
-  /* Projecten per school                                             */
+  /* Projecten per deelnemer                                          */
   /* ---------------------------------------------------------------- */
 
   /**
-   * Het overzicht waar een school aan afleest hoeveel van haar pot al opging
+   * Het overzicht waar een vestiging aan afleest hoeveel van haar pot al opging
    * aan projecten en hoeveel er nog beschikbaar is.
    */
   function tekenProjecten() {
@@ -567,7 +592,8 @@ const UI = (function () {
 
     const projecten = data.projecten || [];
     const gesorteerd = resultaat.scholen.slice()
-      .sort((a, b) => a.schoolNaam.localeCompare(b.schoolNaam, 'nl'));
+      .sort((a, b) => a.schoolNaam.localeCompare(b.schoolNaam, 'nl')
+        || a.vestigingNaam.localeCompare(b.vestigingNaam, 'nl'));
 
     // Waar de pot vandaan komt, meteen boven de tabel: het bedrag in de
     // kolomvoet is niet het budget dat in de configuratie staat.
@@ -587,8 +613,8 @@ const UI = (function () {
       ? `<p class="mx-1 mb-3 rounded-md border border-sky-200 bg-sky-50 p-3 text-sm leading-6 text-sky-900">
            Er zijn nog geen projecten ingegeven. Voeg ze toe in de Google Sheet via
            <em>Subsidietool → Project toevoegen</em>; elk project wordt een kolom waar de stad
-           per school het factuurbedrag intypt. Zolang er niets ingevuld is, staat de volledige
-           pot van elke school nog open.
+           per ${EENHEID.enkelvoud} het factuurbedrag intypt. Zolang er niets ingevuld is, staat de volledige
+           pot van elke ${EENHEID.enkelvoud} nog open.
          </p>`
       : '');
 
@@ -607,10 +633,7 @@ const UI = (function () {
 
       return `
         <tr>
-          <td class="px-3 py-3">
-            <div class="font-medium text-slate-900">${esc(school.schoolNaam)}</div>
-            <div class="text-xs text-slate-400">${esc(school.instellingsnummer || 'geen nummer')} · ${aantal.format(school.gegevens.lln)} lln</div>
-          </td>
+          <td class="px-3 py-3">${deelnemerCel(school, `${aantal.format(school.gegevens.lln)} lln`)}</td>
           <td class="px-3 py-3 text-right whitespace-nowrap text-slate-700">${euro.format(eigen.basisaandeel)}</td>
           <td class="px-2 py-3 text-right">${knop(sleutel, besteed)}</td>
           <td class="px-3 py-3 text-right whitespace-nowrap font-semibold ${beschikbaar < -0.005 ? 'text-amber-700' : 'text-emerald-700'}">${euro.format(beschikbaar)}</td>
@@ -627,7 +650,7 @@ const UI = (function () {
       <table class="min-w-full text-sm">
         <thead class="bg-slate-50 text-xs uppercase tracking-wider text-slate-500">
           <tr>
-            <th class="px-3 py-3 text-left font-medium">School</th>
+            <th class="px-3 py-3 text-left font-medium">${EENHEID.kop}</th>
             <th class="px-3 py-3 text-right font-medium">Pot<div class="font-normal normal-case text-slate-400">aandeel luik ${r.luik.nummer}</div></th>
             <th class="px-2 py-3 text-right font-medium">Besteed<div class="font-normal normal-case text-slate-400">facturen</div></th>
             <th class="px-3 py-3 text-right font-medium">Nog beschikbaar</th>
@@ -638,7 +661,7 @@ const UI = (function () {
         <tbody class="divide-y divide-slate-200 bg-white">${rijen}</tbody>
         <tfoot class="bg-slate-100 font-semibold text-slate-800">
           <tr>
-            <td class="px-3 py-3">Totaal (${resultaat.scholen.length} scholen)</td>
+            <td class="px-3 py-3">Totaal (${resultaat.scholen.length} ${EENHEID.meervoud})</td>
             <td class="px-3 py-3 text-right whitespace-nowrap">${euro.format(somPot)}</td>
             <td class="px-3 py-3 text-right whitespace-nowrap">${euro.format(somBesteed)}</td>
             <td class="px-3 py-3 text-right whitespace-nowrap ${somPot - somBesteed < -0.005 ? 'text-amber-700' : 'text-emerald-700'}">${euro.format(somPot - somBesteed)}</td>
@@ -660,8 +683,8 @@ const UI = (function () {
     const luik = r.luik;
     const stappen = [
       { label: `Budget luik ${luik.nummer}`, waarde: euro.format(r.budget) },
-      { label: `Grondslag deze school (${luik.grondslagLabel})`, waarde: `${decimaal.format(eigen.grondslag)} ${luik.grondslagEenheid || ''}`.trim() },
-      { label: 'Grondslag alle scholen', waarde: `${decimaal.format(r.totaleGrondslag)} ${luik.grondslagEenheid || ''}`.trim() },
+      { label: `Grondslag deze ${EENHEID.enkelvoud} (${luik.grondslagLabel})`, waarde: `${decimaal.format(eigen.grondslag)} ${luik.grondslagEenheid || ''}`.trim() },
+      { label: `Grondslag alle ${EENHEID.meervoud}`, waarde: `${decimaal.format(r.totaleGrondslag)} ${luik.grondslagEenheid || ''}`.trim() },
       { label: 'Aandeel', waarde: formatteer(eigen.aandeel, 'procent') }
     ];
 
@@ -687,17 +710,17 @@ const UI = (function () {
 
     return {
       titel: `Luik ${luik.nummer}: ${luik.naam}`,
-      school: `${school.schoolNaam} · ${school.instellingsnummer || 'geen nummer'}`,
+      school: deelnemerTitel(school),
       bedrag: eigen.bedrag,
       uitleg: luik.toelichting,
       formule: `${euro.format(r.budget)} × ${decimaal.format(eigen.grondslag)} / ${decimaal.format(r.totaleGrondslag)} = ${euro.format(eigen.bedrag)}`,
       stappen,
       voorwaarden: luik.voorwaarden || [],
-      opmerking: eigen.geplafonneerd ? 'Deze school zit op haar plafond: het bedrag is begrensd door de ingediende facturen.' : ''
+      opmerking: eigen.geplafonneerd ? `Deze ${EENHEID.enkelvoud} zit op haar plafond: het bedrag is begrensd door de ingediende facturen.` : ''
     };
   }
 
-  /** Waar het bestede bedrag van één school vandaan komt: factuur per factuur. */
+  /** Waar het bestede bedrag van één deelnemer vandaan komt: factuur per factuur. */
   function maakProjectDetail(r, school) {
     const projecten = data.projecten || [];
     const eigen = r.perSchool[school.sleutel];
@@ -715,26 +738,41 @@ const UI = (function () {
     const beschikbaar = eigen.basisaandeel - besteed;
     return {
       titel: 'Projecten',
-      school: `${school.schoolNaam} · ${school.instellingsnummer || 'geen nummer'}`,
+      school: deelnemerTitel(school),
       bedrag: besteed,
       uitleg: gebruikt.length === 0
-        ? `Voor deze school zijn er nog geen projectfacturen ingegeven. De volledige pot van ${euro.format(eigen.basisaandeel)} staat dus nog open.`
-        : `De facturen die de stad voor deze school noteerde. Samen ${euro.format(besteed)} van een pot van ${euro.format(eigen.basisaandeel)}.`,
+        ? `Voor deze ${EENHEID.enkelvoud} zijn er nog geen projectfacturen ingegeven. De volledige pot van ${euro.format(eigen.basisaandeel)} staat dus nog open.`
+        : `De facturen die de stad voor deze ${EENHEID.enkelvoud} noteerde. Samen ${euro.format(besteed)} van een pot van ${euro.format(eigen.basisaandeel)}.`,
       formule: gebruikt.length === 0
         ? `${euro.format(eigen.basisaandeel)} pot - ${euro.format(0)} besteed = ${euro.format(eigen.basisaandeel)} beschikbaar`
         : `${gebruikt.map(p => euro.format(school.projecten[p.id])).join(' + ')} = ${euro.format(besteed)}`,
       stappen,
       voorwaarden: r.luik.voorwaarden || [],
       opmerking: beschikbaar < -0.005
-        ? `Deze school besteedde ${euro.format(-beschikbaar)} meer dan haar eigen pot. Bij de eindafrekening kan dat opgevangen worden met wat andere scholen niet gebruikten.`
+        ? `Deze ${EENHEID.enkelvoud} besteedde ${euro.format(-beschikbaar)} meer dan haar eigen pot. Bij de eindafrekening kan dat opgevangen worden met wat andere ${EENHEID.meervoud} niet gebruikten.`
         : ''
     };
+  }
+
+  /**
+   * Heeft de school nog andere vestigingen, dan ook hun bedrag en het totaal
+   * per instellingsnummer: de stad betaalt uit aan de school.
+   */
+  function zusterStappen(school) {
+    if (!school.zusters || school.zusters.length === 0) return [];
+    const zusters = school.zusters.map(sleutel => resultaat.scholen.find(s => s.sleutel === sleutel));
+    const totaal = [school].concat(zusters)
+      .reduce((t, s) => t + resultaat.totaalPerSchool[s.sleutel], 0);
+    return zusters.map(s => ({
+      label: `Andere vestiging: ${s.vestigingNaam}`,
+      waarde: euro.format(resultaat.totaalPerSchool[s.sleutel])
+    })).concat([{ label: `Totaal school (${zusters.length + 1} vestigingen)`, waarde: euro.format(totaal) }]);
   }
 
   function maakTotaalDetail(school) {
     return {
       titel: 'Totale subsidie',
-      school: `${school.schoolNaam} · ${school.instellingsnummer || 'geen nummer'}`,
+      school: deelnemerTitel(school),
       bedrag: resultaat.totaalPerSchool[school.sleutel],
       uitleg: 'De som van alle luiken. Elk luik heeft een eigen budget en een eigen verdeelsleutel; er is geen sokkelbedrag.',
       formule: resultaat.luiken.map(r => euro.format(r.perSchool[school.sleutel].bedrag)).join(' + '),
@@ -744,7 +782,7 @@ const UI = (function () {
       })).concat([
         { label: 'Leerlingen', waarde: aantal.format(school.gegevens.lln) },
         { label: 'Bedrag per leerling', waarde: school.gegevens.lln > 0 ? euro.format(resultaat.totaalPerSchool[school.sleutel] / school.gegevens.lln) : '-' }
-      ]),
+      ]).concat(zusterStappen(school)),
       voorwaarden: [],
       opmerking: ''
     };
@@ -777,7 +815,7 @@ const UI = (function () {
       { label: 'Verdeeld', waarde: euro.format(r.budget - r.nietVerdeeld) },
       { label: 'Niet verdeeld', waarde: euro.format(r.nietVerdeeld) },
       { label: 'Totale grondslag', waarde: `${decimaal.format(r.totaleGrondslag)} ${r.luik.grondslagEenheid || ''}`.trim() },
-      { label: 'Aantal scholen', waarde: aantal.format(resultaat.scholen.length) }
+      { label: `Aantal ${EENHEID.meervoud}`, waarde: aantal.format(resultaat.scholen.length) }
     ];
     if (r.overdracht) {
       const bron = LUIKEN.find(l => l.overdrachtNaar === r.luik.id);
@@ -786,13 +824,13 @@ const UI = (function () {
         { label: bron ? `Uit luik ${bron.nummer} (${bron.naam})` : 'Overgedragen', waarde: euro.format(r.overdracht) });
     }
     r.rondes.forEach(ronde => stappen.push({
-      label: `Ronde ${ronde.ronde} (${ronde.aantalDeelnemers} scholen)`,
+      label: `Ronde ${ronde.ronde} (${ronde.aantalDeelnemers} ${EENHEID.meervoud})`,
       waarde: `${euro.format(ronde.uitgedeeld)} uitgedeeld`
     }));
 
     return {
       titel: `Luik ${r.luik.nummer}: ${r.luik.naam}`,
-      school: 'Alle scholen samen',
+      school: `Alle ${EENHEID.meervoud} samen`,
       bedrag: r.budget - r.nietVerdeeld,
       uitleg: r.luik.toelichting,
       formule: `${euro.format(r.budget)} verdeeld op ${r.luik.grondslagLabel}`,
@@ -894,7 +932,7 @@ const UI = (function () {
     tekenResultaten();
     tekenProjecten();
     tekenDataStatus();
-    el('scholen-teller').textContent = `${resultaat.scholen.length} scholen · ${resultaat.vestigingen.length} vestigingen`;
+    el('scholen-teller').textContent = `${aantalScholen()} scholen · ${resultaat.vestigingen.length} vestigingen`;
     if (actieveDetailSleutel && details.has(actieveDetailSleutel)) toonDetail(actieveDetailSleutel);
     else if (actieveDetailSleutel) sluitPaneel();
   }

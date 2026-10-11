@@ -15,6 +15,17 @@
  */
 
 /* ------------------------------------------------------------------ */
+/* 0. VERDEELEENHEID: wie krijgt een eigen bedrag                      */
+/* ------------------------------------------------------------------ */
+/**
+ * 'vestiging'  elke vestiging is een eigen deelnemer: een eigen bedrag per
+ *              luik en een eigen projectenpot (afspraak werkgroep).
+ * 'school'     vestigingen met hetzelfde instellingsnummer worden samengeteld
+ *              tot één bedrag.
+ */
+const VERDEELEENHEID = 'vestiging';
+
+/* ------------------------------------------------------------------ */
 /* 1. VELDEN: de gegevens die per vestiging bekend (moeten) zijn       */
 /* ------------------------------------------------------------------ */
 /**
@@ -75,7 +86,7 @@ const INSTELLINGEN = [
  * overschot.
  *
  * grondslag(vestiging, ctx) -> getal
- *      De verdeelsleutel, berekend per vestiging en opgeteld per school.
+ *      De verdeelsleutel, berekend per vestiging en opgeteld per VERDEELEENHEID.
  * vereist: [veldkey]
  *      Velden zonder standaardwaarde die ontbreken -> het luik meldt dat.
  * vereistInfrastructuur: true
@@ -143,12 +154,12 @@ const LUIKEN = [
       }
     ],
     voorwaarden: [
-      'Elke school heeft een eigen pot naar rato van haar leerlingenaantal.',
-      'De facturen worden per school en per project bijgehouden in het tabblad PROJECTEN, zodat elke school ziet waaraan haar pot opging en hoeveel er nog over is.',
+      'Elke vestiging heeft een eigen pot naar rato van haar leerlingenaantal.',
+      'De facturen worden per vestiging en per project bijgehouden in het tabblad PROJECTEN, zodat elke vestiging ziet waaraan haar pot opging en hoeveel er nog over is.',
       'Projecten hoeven niet vooraf ter bespreking voorgelegd te worden.',
-      'Wat een school niet gebruikt, kan herverdeeld worden over de scholen die hun eigen pot wél opgebruikten.'
+      'Wat een vestiging niet gebruikt, kan herverdeeld worden over de vestigingen die hun eigen pot wél opgebruikten.'
     ],
-    toelichting: 'Elke school krijgt een aandeel van de pot naar rato van haar leerlingenaantal. De pot is de €15.000 plus of min het saldo van luik 1. De stad noteert per school de afzonderlijke projectfacturen; het verschil tussen de pot en het bestede bedrag is wat de school nog beschikbaar heeft. Bij de eindafrekening kan wat onbenut bleef herverdeeld worden.'
+    toelichting: 'Elke vestiging krijgt een aandeel van de pot naar rato van haar leerlingenaantal. De pot is de €15.000 plus of min het saldo van luik 1. De stad noteert per vestiging de afzonderlijke projectfacturen; het verschil tussen de pot en het bestede bedrag is wat de vestiging nog beschikbaar heeft. Bij de eindafrekening kan wat onbenut bleef herverdeeld worden.'
   },
 
   {
