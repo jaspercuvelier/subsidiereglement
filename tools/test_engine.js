@@ -137,33 +137,34 @@ metFacturen.projecten = [
   { id: 'ehbo', naam: 'Reanimatielessen', omschrijving: 'Rode Kruis, per klas' },
   { id: 'verkeer', naam: 'Verkeersveiligheid', omschrijving: 'Fietsbehendigheid op de speelplaats' }
 ];
-metFacturen.vestigingen.forEach((v, i) => {
-  v.projecten = i < 3 ? {} : { ehbo: 2500, verkeer: 1500 };
+metFacturen.projectbedragen = {};
+Array.from(new Set(metFacturen.vestigingen.map(v => v.instellingsnummer))).forEach((nummer, i) => {
+  metFacturen.projectbedragen[nummer] = i < 3 ? {} : { ehbo: 2500, verkeer: 1500 };
 });
 const hv = context.Engine.bereken(metFacturen, Object.assign({}, instellingen, { herverdeelProjecten: true }));
 const luik2 = hv.luiken.find(l => l.luik.id === 'projecten');
 console.log(`Pot: ${euro(luik2.budget)}, rondes: ${luik2.rondes.length}, niet verdeeld: ${euro(luik2.nietVerdeeld)}`);
-hv.scholen.forEach(s => {
-  const p = luik2.perSchool[s.sleutel];
+luik2.groepen.forEach(s => {
+  const p = luik2.perGroep[s.sleutel];
   console.log(`  ${s.schoolNaam.slice(0, 32).padEnd(34)} pot ${euro(p.basisaandeel).padStart(11)}` +
               `  besteed ${euro(s.projectenTotaal).padStart(11)}` +
               `  beschikbaar ${euro(p.basisaandeel - s.projectenTotaal).padStart(11)}` +
               `  -> ${euro(p.bedrag).padStart(11)}${p.geplafonneerd ? '  (op plafond)' : ''}`);
 });
 check('De facturen per project worden per school opgeteld',
-      hv.scholen.every(s => Math.abs(s.projectenTotaal - (s.projecten.ehbo || 0) - (s.projecten.verkeer || 0)) < 0.005));
+      luik2.groepen.every(s => Math.abs(s.projectenTotaal - (s.projecten.ehbo || 0) - (s.projecten.verkeer || 0)) < 0.005));
 check('Het aandeel in de pot is onafhankelijk van de herverdeling',
-      hv.scholen.every(s => Math.abs(
-        luik2.perSchool[s.sleutel].basisaandeel
+      luik2.groepen.every(s => Math.abs(
+        luik2.perGroep[s.sleutel].basisaandeel
         - context.Engine.bereken(metFacturen, instellingen).luiken
-            .find(l => l.luik.id === 'projecten').perSchool[s.sleutel].bedrag) < 0.005));
+            .find(l => l.luik.id === 'projecten').perGroep[s.sleutel].bedrag) < 0.005));
 check('De som van alle potten is de volledige projectpot',
-      Math.abs(hv.scholen.reduce((t, s) => t + luik2.perSchool[s.sleutel].basisaandeel, 0) - luik2.budget) < 0.005);
+      Math.abs(luik2.groepen.reduce((t, s) => t + luik2.perGroep[s.sleutel].basisaandeel, 0) - luik2.budget) < 0.005);
 check('Scholen zonder facturen krijgen niets uit luik 2',
-      hv.scholen.every(s => luik2.perSchool[s.sleutel].plafond !== 0 || luik2.perSchool[s.sleutel].bedrag === 0));
+      luik2.groepen.every(s => luik2.perGroep[s.sleutel].plafond !== 0 || luik2.perGroep[s.sleutel].bedrag === 0));
 check('Geen enkele school krijgt meer dan haar plafond',
-      hv.scholen.every(s => {
-        const p = luik2.perSchool[s.sleutel];
+      luik2.groepen.every(s => {
+        const p = luik2.perGroep[s.sleutel];
         return p.plafond === null || p.bedrag <= p.plafond + 0.005;
       }));
 check('Herverdeling gebruikte meer dan één ronde', luik2.rondes.length > 1);
@@ -193,13 +194,40 @@ const perVestiging = JSON.parse(JSON.stringify(data));
 perVestiging.projecten = [{ id: 'ehbo', naam: 'Reanimatielessen', omschrijving: '' }];
 const amandus = perVestiging.vestigingen.filter(v => v.instellingsnummer === '110478');
 check('Sint-Amandus heeft twee vestigingen in de snapshot', amandus.length === 2);
-amandus[0].projecten = { ehbo: 300 };
-amandus[1].projecten = { ehbo: 700 };
+perVestiging.projectbedragen = { '110478': { ehbo: 1000 } };
 const pv = context.Engine.bereken(perVestiging, instellingen);
 const pvAmandus = pv.scholen.filter(s => s.instellingsnummer === '110478');
 check('Twee vestigingen van één school krijgen elk een eigen bedrag', pvAmandus.length === 2);
-check('De projectfacturen blijven bij hun eigen vestiging',
-      pvAmandus.map(s => s.projectenTotaal).sort((a, b) => a - b).join() === '300,700');
+const pvLuik2 = pv.luiken.find(l => l.luik.id === 'projecten');
+check('De projectfacturen horen bij de school, niet bij een vestiging',
+      pvLuik2.groepen.find(g => g.instellingsnummer === '110478').projectenTotaal === 1000
+        && pvAmandus.every(s => s.projectenTotaal === 0));
+check('Luik 2 wordt verdeeld over één pot per instellingsnummer',
+      pvLuik2.groepen.length === new Set(data.vestigingen.map(v => v.instellingsnummer)).size);
+check('Het projectbedrag van de vestigingen telt op tot dat van de school',
+      Math.abs(pvAmandus.reduce((t, s) => t + pvLuik2.perSchool[s.sleutel].bedrag, 0)
+        - pvLuik2.perGroep['110478'].bedrag) < 0.005);
+check('De luiken 3 tot 5 blijven per vestiging verdeeld',
+      pv.luiken.filter(l => !l.centraal && l.luik.id !== 'projecten').every(l => l.groepen === pv.scholen));
+
+// Het voorbeeld waarvoor de projecten per school gaan: de ene vestiging
+// besteedt niets, de andere veel meer dan haar deel. Per school vangt de
+// eerste het tekort van de tweede op; per vestiging zou haar deel naar alle
+// scholen gaan.
+const scheef = JSON.parse(JSON.stringify(perVestiging));
+scheef.projectbedragen = {};
+new Set(scheef.vestigingen.map(v => v.instellingsnummer)).forEach(nummer => {
+  scheef.projectbedragen[nummer] = { ehbo: 5000 };
+});
+const pot = (instelling) => {
+  const uitkomst = context.Engine.bereken(scheef, Object.assign({}, instellingen, { herverdeelProjecten: true }));
+  return uitkomst.luiken.find(l => l.luik.id === 'projecten').perGroep['110478'];
+};
+scheef.projectbedragen['110478'] = { ehbo: 3000 };
+const amandusPot = pot();
+check('Een school met twee vestigingen krijgt haar facturen tot aan haar plafond terug',
+      amandusPot.bedrag <= 3000 + 0.005 && amandusPot.bedrag >= amandusPot.basisaandeel - 0.005,
+      `(${euro(amandusPot.bedrag)} van ${euro(3000)}, pot ${euro(amandusPot.basisaandeel)})`);
 check('De vestigingen van één school kennen elkaar',
       pvAmandus.every(s => s.zusters.length === 1 && pvAmandus.some(a => a.sleutel === s.zusters[0])));
 check('Een vestiging zonder zusters heeft er geen',

@@ -9,7 +9,7 @@ Rekentool voor de verdeling van de enveloppe flankerend onderwijs van Stad Tielt
 | # | Luik | Budget | Verdeelsleutel |
 |---|------|--------|----------------|
 | 1 | Fluojasjes | €5.000 | niet verdeeld: de stad koopt centraal aan |
-| 2 | Projecten | €15.000 ± saldo luik 1 | leerlingen, optioneel geplafonneerd op de ingediende facturen |
+| 2 | Projecten | €15.000 ± saldo luik 1 | leerlingen, per school; optioneel geplafonneerd op de ingediende facturen |
 | 3 | Sociaal engagement | €20.000 | leerlingen × OKI-factor |
 | 4 | Vervoer stedelijke infrastructuur | €35.000 | bezoekers × afstand, vanaf 1 km |
 | 5 | Middagtoezicht | €35.000 | leerlingen |
@@ -30,8 +30,12 @@ zakt ze naar €13.500. De enveloppe blijft in beide gevallen €110.000.
 ### Per vestiging
 
 De werkgroep sprak af per vestiging te werken: elke rij in `VESTIGINGEN` krijgt
-een eigen bedrag per luik en een eigen projectenpot, ook als twee vestigingen
-hetzelfde instellingsnummer hebben. Klik in de tool op het totaal van zo'n
+een eigen bedrag per luik, ook als twee vestigingen hetzelfde instellingsnummer
+hebben. Leerlingen, OKI, afstanden en bezoeken worden dus per vestiging
+ingevuld.
+
+Eén uitzondering: de projecten (luik 2) worden per school verdeeld, zie *De
+projecten per school* hieronder. Klik in de tool op het totaal van zo'n
 vestiging, dan zie je ook de andere vestigingen en het totaal voor de hele
 school. Wil men ooit terug naar één bedrag per instellingsnummer, dan volstaat
 `VERDEELEENHEID = 'school'` in `js/config.js`.
@@ -43,18 +47,37 @@ Een vestiging bijzetten:
 2. *Subsidietool → Tabbladen synchroniseren*: de rij verschijnt in `GEGEVENS`,
    `AFSTANDEN`, `BEZOEKEN` en `PROJECTBEDRAGEN`.
 3. *Subsidietool → Ontbrekende afstanden berekenen*.
-4. Leerlingen, OKI, bezoekers en projectfacturen verdelen over de vestigingen.
-   Laat je de cijfers van de hele school bij één vestiging staan, dan krijgt
-   die vestiging alles en de nieuwe niets.
+4. Leerlingen, OKI en bezoekers verdelen over de vestigingen. Laat je de
+   cijfers van de hele school bij één vestiging staan, dan krijgt die vestiging
+   alles en de nieuwe niets. Vooral bij de bezoeken telt dat: die worden
+   vermenigvuldigd met de afstand vanaf de vestiging waar de kinderen
+   vertrekken.
 
-### De projecten per vestiging
+### De projecten per school
 
-Elke vestiging heeft in luik 2 een eigen pot naar rato van haar leerlingenaantal.
-De stad noteert de projectfacturen in de sheet: elk project is een kolom in
-`PROJECTBEDRAGEN`, met naam en korte omschrijving in `PROJECTEN`, en elke
-vestiging een rij. De tool toont per vestiging de pot, wat er al besteed is (met
-de facturen erachter) en wat er nog beschikbaar is, zodat een vestiging kan
-aflezen dat ze bijvoorbeeld nog €200 heeft staan.
+Luik 2 wordt per instellingsnummer verdeeld (`eenheid: 'school'` in
+`js/config.js`). Elke school heeft één pot naar rato van het leerlingenaantal
+van al haar vestigingen samen. De stad noteert de projectfacturen in de sheet:
+elk project is een kolom in `PROJECTBEDRAGEN`, met naam en korte omschrijving in
+`PROJECTEN`, en elke school een rij. De tool toont per school de pot, wat er al
+besteed is (met de facturen erachter) en wat er nog beschikbaar is.
+
+Waarom per school: de factuur gaat naar de school, en een project loopt meestal
+over alle vestigingen heen. Per vestiging zou je zo'n factuur kunstmatig moeten
+opsplitsen. Met herverdeling aan zou een vestiging die minder uitgeeft haar
+overschot bovendien aan alle scholen afstaan, terwijl haar zustervestiging
+tekort heeft. Zonder herverdeling maakt het voor het bedrag niets uit: de pot
+volgt het leerlingenaantal, en de potjes van de vestigingen tellen op tot die
+van de school.
+
+In de resultatentabel staat per vestiging toch een bedrag voor luik 2: haar
+deel van het schoolbedrag, naar leerlingenaantal. Zo blijft het totaal per
+vestiging alle luiken omvatten.
+
+Een oudere sheet heeft in `PROJECTBEDRAGEN` nog een rij per vestiging (kolom
+`sleutel`). *Tabbladen synchroniseren* zet die om naar een rij per
+instellingsnummer en telt de bedragen van de vestigingen van eenzelfde school
+op. Tot dan telt de tool ze bij het inlezen al zelf samen.
 
 Zet je de instelling *Herverdeel onbenut projectbudget* aan, dan wordt de
 eindafrekening gemaakt: elke school wordt geplafonneerd op wat ze effectief
@@ -212,7 +235,7 @@ resultatentabel, het detailpaneel en de reglementtekst passen zich aan.
 
 Menu *Subsidietool → Project toevoegen*. Het script vraagt naar de naam en een
 korte omschrijving, zet die in `PROJECTEN` en maakt in `PROJECTBEDRAGEN` een
-kolom waar je per school het factuurbedrag intypt. De omschrijving verschijnt in
+kolom waar je per school (instellingsnummer) het factuurbedrag intypt. De omschrijving verschijnt in
 de tool bij het bedrag, zodat elke school ziet waaraan haar pot opging.
 
 Wie liever met de hand werkt: een rij bijzetten in `PROJECTEN` en daarna
@@ -240,9 +263,11 @@ Er komt geen regel code aan te pas.
 | `AFSTANDEN` | sleutel \| school \| één kolom per infrastructuur, in km |
 | `BEZOEKEN` | sleutel \| school \| één kolom per infrastructuur, aantal kinderen |
 | `PROJECTEN` | id \| naam \| omschrijving |
-| `PROJECTBEDRAGEN` | sleutel \| school \| één kolom per project, factuurbedrag in euro |
+| `PROJECTBEDRAGEN` | instellingsnummer \| school \| één kolom per project, factuurbedrag in euro |
 
 De kolom `sleutel` koppelt de tabbladen aan elkaar; hernoem hem niet.
+`PROJECTBEDRAGEN` koppelt op `instellingsnummer`, omdat de projecten per school
+gaan.
 
 De kolom `school` ernaast is er enkel om te zien welke rij je invult. Ze bevat
 een formule die de schoolnaam en de vestiging uit `VESTIGINGEN` haalt, staat

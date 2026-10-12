@@ -11,8 +11,11 @@
  *                     postcode, gemeente,
  *                     gegevens:  { <veldkey>: getal|null },
  *                     afstanden: { <infraId>: km|null },
- *                     bezoeken:  { <infraId>: aantal|null },
- *                     projecten: { <projectId>: euro|null } }] }
+ *                     bezoeken:  { <infraId>: aantal|null } }],
+ *     projectbedragen: { <instellingsnummer>: { <projectId>: euro|null } } }
+ *
+ * De projectfacturen horen bij de school, niet bij een vestiging. Een oudere
+ * payload met `projecten` per vestiging wordt per instellingsnummer samengeteld.
  *
  * Er zijn twee bronnen, in deze volgorde:
  *   1. het Apps Script-endpoint op de Google Sheet (live)
@@ -40,6 +43,15 @@ const Data = (function () {
     if (typeof waarde !== 'string') return terugval;
     const geknipt = waarde.trim();
     return geknipt === '' ? terugval : geknipt;
+  }
+
+  /**
+   * Een instellingsnummer als tekst van zes cijfers. De sheet levert het soms
+   * als getal (2543 in plaats van "002543").
+   */
+  function instellingsnummer(waarde) {
+    const ruw = waarde === null || waarde === undefined ? '' : String(waarde).trim();
+    return ruw ? ruw.padStart(6, '0') : '';
   }
 
   function leidDeelgemeenteAf(vestiging) {
@@ -84,29 +96,47 @@ const Data = (function () {
         bezoeken[infra.id] = getalOfNull(ruw.bezoeken ? ruw.bezoeken[infra.id] : null);
       });
 
-      const projectbedragen = {};
-      projecten.forEach(project => {
-        projectbedragen[project.id] = getalOfNull(ruw.projecten ? ruw.projecten[project.id] : null);
-      });
-
       const vestiging = {
         id: volgendeId++,
         // De sleutel uit VESTIGINGEN in de sheet; leeg bij een oudere snapshot.
         sleutel: tekst(ruw.sleutel),
-        instellingsnummer: tekst(ruw.instellingsnummer).padStart(6, '0'),
+        instellingsnummer: instellingsnummer(ruw.instellingsnummer),
         schoolNaam: tekst(ruw.schoolNaam, 'Naamloze school'),
         vestigingNaam: tekst(ruw.vestigingNaam, adres),
         adres,
         postcode,
         gegevens,
         afstanden,
-        bezoeken,
-        projecten: projectbedragen
+        bezoeken
       };
       vestiging.gemeente = tekst(ruw.gemeente) || GEMEENTE;
       vestiging.deelgemeente = leidDeelgemeenteAf(Object.assign({}, ruw, { adres, postcode }));
       return vestiging;
     });
+
+    // Eén rij projectbedragen per school. Levert de bron ze nog per vestiging,
+    // dan worden de vestigingen van eenzelfde school samengeteld.
+    const projectbedragen = {};
+    const nummers = Array.from(new Set(vestigingen.map(v => v.instellingsnummer).filter(Boolean)));
+    nummers.forEach(nummer => {
+      projectbedragen[nummer] = {};
+      projecten.forEach(project => { projectbedragen[nummer][project.id] = null; });
+    });
+    const telBij = (nummer, bedragen) => {
+      if (!projectbedragen[nummer] || !bedragen) return;
+      projecten.forEach(project => {
+        const bedrag = getalOfNull(bedragen[project.id]);
+        if (bedrag === null) return;
+        projectbedragen[nummer][project.id] = (projectbedragen[nummer][project.id] || 0) + bedrag;
+      });
+    };
+    if (payload.projectbedragen) {
+      Object.keys(payload.projectbedragen).forEach(nummer =>
+        telBij(instellingsnummer(nummer), payload.projectbedragen[nummer]));
+    } else {
+      (payload.vestigingen || []).forEach(ruw =>
+        telBij(instellingsnummer(ruw.instellingsnummer), ruw.projecten));
+    }
 
     // Elke andere META-rij die overeenkomt met een instelling uit config.js
     // stuurt het model bij vanuit de sheet, bv. het factuurbedrag fluojasjes.
@@ -129,7 +159,8 @@ const Data = (function () {
       },
       infrastructuur,
       projecten,
-      vestigingen
+      vestigingen,
+      projectbedragen
     };
   }
 
@@ -228,9 +259,9 @@ const Data = (function () {
         deelgemeente: v.deelgemeente,
         gegevens: v.gegevens,
         afstanden: v.afstanden,
-        bezoeken: v.bezoeken,
-        projecten: v.projecten
-      }))
+        bezoeken: v.bezoeken
+      })),
+      projectbedragen: data.projectbedragen
     };
   }
 

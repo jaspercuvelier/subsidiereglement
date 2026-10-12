@@ -80,21 +80,11 @@ const Engine = (function () {
       }
     });
 
-    // De projectfacturen staan niet in VELDEN maar in een eigen matrix, met
-    // een kolom per project. Ontbrekende cellen tellen als nul euro.
-    const projecten = {};
-    (ctx && ctx.projecten ? ctx.projecten : []).forEach(project => {
-      const ruw = vestiging.projecten ? vestiging.projecten[project.id] : null;
-      projecten[project.id] = isLeeg(ruw) ? 0 : getal(ruw);
-    });
-
     return Object.assign({}, vestiging, {
       gegevens,
       ruweGegevens: vestiging.gegevens || {},
       geschat,
-      ontbrekend,
-      projecten,
-      projectenTotaal: Object.keys(projecten).reduce((t, id) => t + projecten[id], 0)
+      ontbrekend
     });
   }
 
@@ -120,8 +110,12 @@ const Engine = (function () {
    *
    * De deelnemers heten in de rest van de code "scholen" (perSchool,
    * totaalPerSchool): dat bleef zo toen de verdeling per vestiging ging.
+   *
+   * De projectfacturen horen bij het instellingsnummer, niet bij een
+   * vestiging. Een groep per school krijgt ze uit `projectbedragen`; een groep
+   * per vestiging heeft er geen.
    */
-  function groepeerScholen(vestigingen, eenheid = (typeof VERDEELEENHEID === 'string' ? VERDEELEENHEID : 'school')) {
+  function groepeerScholen(vestigingen, eenheid = (typeof VERDEELEENHEID === 'string' ? VERDEELEENHEID : 'school'), projectbedragen = {}, projecten = []) {
     const groepen = new Map();
 
     vestigingen.forEach(vestiging => {
@@ -173,13 +167,14 @@ const Engine = (function () {
         school.ontbrekend[veld.key] = ergensOntbrekend;
       });
 
-      // De projectfacturen van alle vestigingen samen: de school is de
-      // tegenpartij van de stad, niet de losse vestiging.
-      school.vestigingen.forEach(vestiging => {
-        Object.keys(vestiging.projecten || {}).forEach(id => {
-          school.projecten[id] = getal(school.projecten[id]) + getal(vestiging.projecten[id]);
+      // De school is de tegenpartij van de stad voor de projectfacturen.
+      // Ontbrekende cellen tellen als nul euro.
+      if (eenheid === 'school') {
+        const ruw = projectbedragen[school.instellingsnummer] || {};
+        projecten.forEach(project => {
+          school.projecten[project.id] = isLeeg(ruw[project.id]) ? 0 : getal(ruw[project.id]);
         });
-      });
+      }
       school.projectenTotaal = Object.keys(school.projecten)
         .reduce((t, id) => t + school.projecten[id], 0);
     });
@@ -303,16 +298,18 @@ const Engine = (function () {
   /* Eén luik doorrekenen                                             */
   /* ---------------------------------------------------------------- */
 
-  function berekenLuik(luik, scholen, vestigingen, ctx, budget) {
-    const herverdeel = typeof luik.herverdeel === 'function' ? luik.herverdeel(ctx) : false;
-
-    const deelnemers = scholen.map(school => {
-      const grondslag = school.vestigingen.reduce(
+  /**
+   * Verdeelt het budget van één luik over `groepen`. Dat zijn de deelnemers,
+   * of voor een luik met `eenheid: 'school'` de scholen per instellingsnummer.
+   */
+  function verdeelOverGroepen(luik, groepen, ctx, budget, herverdeel) {
+    const deelnemers = groepen.map(groep => {
+      const grondslag = groep.vestigingen.reduce(
         (totaal, vestiging) => totaal + getal(luik.grondslag(vestiging, ctx)), 0
       );
-      const plafond = typeof luik.plafond === 'function' ? luik.plafond(school, ctx) : null;
+      const plafond = typeof luik.plafond === 'function' ? luik.plafond(groep, ctx) : null;
       return {
-        sleutel: school.sleutel,
+        sleutel: groep.sleutel,
         grondslag,
         plafond: isLeeg(plafond) ? null : getal(plafond)
       };
@@ -331,25 +328,81 @@ const Engine = (function () {
     );
     const basis = rondAfNaarCent(basisBedragen, totaleGrondslag > 0 ? getal(budget) : 0);
 
-    const perSchool = {};
-    scholen.forEach((school, index) => {
+    const perGroep = {};
+    groepen.forEach((groep, index) => {
       const deelnemer = deelnemers[index];
       const resultaat = {
-        sleutel: school.sleutel,
+        sleutel: groep.sleutel,
         grondslag: deelnemer.grondslag,
         aandeel: totaleGrondslag > 0 ? deelnemer.grondslag / totaleGrondslag : 0,
         bedrag: afgerond[index],
         basisaandeel: basis[index],
         plafond: deelnemer.plafond,
-        geplafonneerd: verdeling.geplafonneerd.has(school.sleutel)
+        geplafonneerd: verdeling.geplafonneerd.has(groep.sleutel)
       };
       resultaat.afgeleiden = (luik.afgeleiden || []).map(afgeleide => ({
         label: afgeleide.label,
         formaat: afgeleide.formaat,
-        waarde: afgeleide.bereken(resultaat, school, ctx)
+        waarde: afgeleide.bereken(resultaat, groep, ctx)
       }));
-      perSchool[school.sleutel] = resultaat;
+      perGroep[groep.sleutel] = resultaat;
     });
+
+    return { perGroep, totaleGrondslag, verdeling };
+  }
+
+  /**
+   * Een luik dat per school verdeeld wordt terwijl de deelnemers vestigingen
+   * zijn: het bedrag van de school gaat naar haar vestigingen naar rato van
+   * hun eigen grondslag. Zo blijft de som per vestiging gelijk aan wat de
+   * school krijgt, en telt het totaal per vestiging alle luiken mee.
+   */
+  function spreidOverDeelnemers(luik, scholen, groepen, perGroep, totaleGrondslag, ctx) {
+    const groepVan = new Map();
+    groepen.forEach(groep => groep.vestigingen.forEach(v => groepVan.set(v.id, groep.sleutel)));
+
+    const perSchool = {};
+    groepen.forEach(groep => {
+      const leden = scholen.filter(s => groepVan.get(s.vestigingen[0].id) === groep.sleutel);
+      const eigen = perGroep[groep.sleutel];
+      const grondslagen = leden.map(s => s.vestigingen.reduce(
+        (totaal, vestiging) => totaal + getal(luik.grondslag(vestiging, ctx)), 0));
+      const deel = (bedrag, i) => (eigen.grondslag > 0
+        ? bedrag * grondslagen[i] / eigen.grondslag
+        : bedrag / leden.length);
+      const bedragen = rondAfNaarCent(leden.map((_, i) => deel(eigen.bedrag, i)), eigen.bedrag);
+      const basis = rondAfNaarCent(leden.map((_, i) => deel(eigen.basisaandeel, i)), eigen.basisaandeel);
+
+      leden.forEach((school, i) => {
+        const resultaat = {
+          sleutel: school.sleutel,
+          groep: groep.sleutel,
+          grondslag: grondslagen[i],
+          aandeel: totaleGrondslag > 0 ? grondslagen[i] / totaleGrondslag : 0,
+          bedrag: bedragen[i],
+          basisaandeel: basis[i],
+          plafond: null,
+          geplafonneerd: eigen.geplafonneerd
+        };
+        resultaat.afgeleiden = (luik.afgeleiden || []).map(afgeleide => ({
+          label: afgeleide.label,
+          formaat: afgeleide.formaat,
+          waarde: afgeleide.bereken(resultaat, school, ctx)
+        }));
+        perSchool[school.sleutel] = resultaat;
+      });
+    });
+    return perSchool;
+  }
+
+  function berekenLuik(luik, scholen, schoolGroepen, vestigingen, ctx, budget) {
+    const herverdeel = typeof luik.herverdeel === 'function' ? luik.herverdeel(ctx) : false;
+    const groepen = luik.eenheid === 'school' ? schoolGroepen : scholen;
+
+    const { perGroep, totaleGrondslag, verdeling } = verdeelOverGroepen(luik, groepen, ctx, budget, herverdeel);
+    const perSchool = groepen === scholen
+      ? perGroep
+      : spreidOverDeelnemers(luik, scholen, groepen, perGroep, totaleGrondslag, ctx);
 
     return {
       luik,
@@ -361,6 +414,10 @@ const Engine = (function () {
       rondes: verdeling.rondes,
       nietVerdeeld: verdeling.nietVerdeeld,
       perSchool,
+      // Over wie de pot effectief verdeeld werd: dezelfde deelnemers als
+      // perSchool, of de scholen per instellingsnummer.
+      groepen,
+      perGroep,
       dataStatus: bepaalDataStatus(luik, vestigingen, ctx)
     };
   }
@@ -413,12 +470,19 @@ const Engine = (function () {
     const ctx = {
       infrastructuur: data.infrastructuur || [],
       projecten: data.projecten || [],
+      projectbedragen: data.projectbedragen || {},
       instellingen,
       velden: VELDEN
     };
 
     const verrijkt = vestigingen.map(v => verrijkVestiging(v, ctx));
-    const scholen = groepeerScholen(verrijkt);
+    const eenheid = typeof VERDEELEENHEID === 'string' ? VERDEELEENHEID : 'school';
+    const scholen = groepeerScholen(verrijkt, eenheid, ctx.projectbedragen, ctx.projecten);
+    // Eén groep per instellingsnummer, voor de luiken die per school verdeeld
+    // worden (de projecten). Bij een verdeling per school zijn dat de deelnemers zelf.
+    const schoolGroepen = eenheid === 'school'
+      ? scholen
+      : groepeerScholen(verrijkt, 'school', ctx.projectbedragen, ctx.projecten);
 
     // Bij een verdeling per vestiging: de vestigingen die samen één school
     // vormen, zodat de weergave ook het totaal per instellingsnummer kan tonen.
@@ -447,7 +511,7 @@ const Engine = (function () {
       // Een tekort dat groter is dan de pot zelf kan niet verder verrekend
       // worden; de pot gaat op nul en het verschil wordt gemeld.
       const budget = Math.max(0, getal(luik.budget) + overdracht);
-      const resultaat = berekenLuik(luik, scholen, verrijkt, ctx, budget);
+      const resultaat = berekenLuik(luik, scholen, schoolGroepen, verrijkt, ctx, budget);
       resultaat.overdracht = overdracht;
       resultaat.onverrekendTekort = Math.max(0, -(getal(luik.budget) + overdracht));
       return resultaat;
@@ -469,6 +533,7 @@ const Engine = (function () {
     return {
       ctx,
       scholen,
+      schoolGroepen,
       vestigingen: verrijkt,
       luiken: luikResultaten,
       totaalPerSchool,

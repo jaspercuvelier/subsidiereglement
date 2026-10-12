@@ -70,7 +70,7 @@ const UI = (function () {
     const onder = [
       school.vestigingNaam,
       school.instellingsnummer || 'geen nummer',
-      PER_SCHOOL && school.vestigingen.length > 1 ? `${school.vestigingen.length} vestigingen` : '',
+      !school.vestigingNaam && school.vestigingen.length > 1 ? `${school.vestigingen.length} vestigingen` : '',
       extra
     ].filter(Boolean).join(' · ');
     return `<div class="font-medium text-slate-900">${esc(school.schoolNaam)}</div>
@@ -221,11 +221,24 @@ const UI = (function () {
   /* Brongegevens                                                     */
   /* ---------------------------------------------------------------- */
 
-  function invoerCel(vestigingIndex, soort, sleutel, waarde, stap) {
+  /** index: de vestigingsindex, of het instellingsnummer voor de projectbedragen. */
+  function invoerCel(index, soort, sleutel, waarde, stap) {
     if (!bewerkModus) return null;
-    return `<input type="number" step="${stap}" value="${waarde === null ? '' : waarde}"
+    return `<input type="number" step="${stap}" value="${waarde === null || waarde === undefined ? '' : waarde}"
               class="bron-invoer w-24 rounded border border-slate-300 px-1 py-0.5 text-right"
-              data-index="${vestigingIndex}" data-soort="${soort}" data-sleutel="${esc(sleutel)}">`;
+              data-index="${esc(index)}" data-soort="${soort}" data-sleutel="${esc(sleutel)}">`;
+  }
+
+  /** Eén regel per instellingsnummer, met de schoolnaam en haar vestigingen. */
+  function projectRegels() {
+    return Object.keys(data.projectbedragen).map(nummer => {
+      const vestigingen = data.vestigingen.filter(v => v.instellingsnummer === nummer);
+      return {
+        nummer,
+        schoolNaam: vestigingen.length ? vestigingen[0].schoolNaam : nummer,
+        onder: vestigingen.length > 1 ? `${nummer} · ${vestigingen.length} vestigingen` : nummer
+      };
+    }).sort((a, b) => a.schoolNaam.localeCompare(b.schoolNaam, 'nl'));
   }
 
   function tekenGegevensTabel() {
@@ -277,15 +290,26 @@ const UI = (function () {
     if (kolommen.length === 0) {
       return `<p class="p-6 text-sm leading-6 text-slate-500">
         Er zijn nog geen projecten. Voeg ze toe in de Google Sheet via
-        <em>Subsidietool → Project toevoegen</em>: dat maakt een kolom aan waar je per vestiging
+        <em>Subsidietool → Project toevoegen</em>: dat maakt een kolom aan waar je per school
         het factuurbedrag kan intypen, met een korte omschrijving erbij.
       </p>`;
     }
 
-    const rijen = data.vestigingen.map((v, index) => {
+    // De projectfacturen staan per school (instellingsnummer), de afstanden en
+    // bezoeken per vestiging.
+    const regels = isBedrag
+      ? projectRegels().map(r => ({
+          index: r.nummer, bron: 'projectbedragen', waarden: data.projectbedragen[r.nummer],
+          naam: r.schoolNaam, onder: r.onder
+        }))
+      : data.vestigingen.map((v, index) => ({
+          index, bron: soort, waarden: v[soort], naam: v.schoolNaam, onder: v.vestigingNaam
+        }));
+
+    const rijen = regels.map(regel => {
       const cellen = kolommen.map(kolom => {
-        const waarde = v[soort][kolom.id];
-        const invoer = invoerCel(index, soort, kolom.id, waarde, isAfstand ? 0.1 : (isBedrag ? 0.01 : 1));
+        const waarde = regel.waarden[kolom.id];
+        const invoer = invoerCel(regel.index, regel.bron, kolom.id, waarde, isAfstand ? 0.1 : (isBedrag ? 0.01 : 1));
         if (invoer) return `<td class="px-3 py-2 text-right">${invoer}</td>`;
         if (waarde === null) return '<td class="px-3 py-2 text-right text-slate-300">-</td>';
         const teKort = isAfstand && waarde < instellingen.minimumAfstandKm;
@@ -294,8 +318,8 @@ const UI = (function () {
                   ${isAfstand ? formatteer(waarde, 'km') : (isBedrag ? euro.format(waarde) : aantal.format(waarde))}</td>`;
       }).join('');
       return `<tr>
-          <td class="px-3 py-2"><div class="max-w-48 truncate font-medium text-slate-900" title="${esc(v.schoolNaam)}">${esc(v.schoolNaam)}</div>
-            <div class="max-w-48 truncate text-xs text-slate-400" title="${esc(v.vestigingNaam)}">${esc(v.vestigingNaam)}</div></td>
+          <td class="px-3 py-2"><div class="max-w-48 truncate font-medium text-slate-900" title="${esc(regel.naam)}">${esc(regel.naam)}</div>
+            <div class="max-w-48 truncate text-xs text-slate-400" title="${esc(regel.onder)}">${esc(regel.onder)}</div></td>
           ${cellen}
         </tr>`;
     }).join('');
@@ -305,7 +329,7 @@ const UI = (function () {
         <tr>
           <td class="px-3 py-2">Totaal besteed</td>
           ${kolommen.map(kolom => {
-            const som = data.vestigingen.reduce((t, v) => t + (Number(v.projecten[kolom.id]) || 0), 0);
+            const som = Object.values(data.projectbedragen).reduce((t, b) => t + (Number(b[kolom.id]) || 0), 0);
             return `<td class="px-3 py-2 text-right whitespace-nowrap">${euro.format(som)}</td>`;
           }).join('')}
         </tr>
@@ -315,7 +339,7 @@ const UI = (function () {
       <table class="min-w-full text-sm">
         <thead class="bg-slate-50 text-xs uppercase tracking-wider text-slate-500">
           <tr>
-            <th class="px-3 py-3 text-left font-medium">Vestiging</th>
+            <th class="px-3 py-3 text-left font-medium">${isBedrag ? 'School' : 'Vestiging'}</th>
             ${kolommen.map(kolom => `
               <th class="px-3 py-3 text-right font-medium ${!isBedrag && instellingen.infraActief[kolom.id] === false ? 'opacity-40' : ''}"
                   ${kolom.omschrijving ? `title="${esc(kolom.omschrijving)}"` : ''}>${esc(kolom.naam)}</th>`).join('')}
@@ -582,8 +606,15 @@ const UI = (function () {
   /* Projecten per deelnemer                                          */
   /* ---------------------------------------------------------------- */
 
+  /** Over wie de pot van een luik verdeeld wordt: de deelnemers, of de scholen. */
+  function potEenheid(luik) {
+    return luik.eenheid === 'school'
+      ? { enkelvoud: 'school', meervoud: 'scholen', kop: 'School' }
+      : EENHEID;
+  }
+
   /**
-   * Het overzicht waar een vestiging aan afleest hoeveel van haar pot al opging
+   * Het overzicht waar een school aan afleest hoeveel van haar pot al opging
    * aan projecten en hoeveel er nog beschikbaar is.
    */
   function tekenProjecten() {
@@ -591,7 +622,8 @@ const UI = (function () {
     if (!r) { el('projecten-overzicht').innerHTML = ''; return; }
 
     const projecten = data.projecten || [];
-    const gesorteerd = resultaat.scholen.slice()
+    const E = potEenheid(r.luik);
+    const gesorteerd = r.groepen.slice()
       .sort((a, b) => a.schoolNaam.localeCompare(b.schoolNaam, 'nl')
         || a.vestigingNaam.localeCompare(b.vestigingNaam, 'nl'));
 
@@ -613,13 +645,13 @@ const UI = (function () {
       ? `<p class="mx-1 mb-3 rounded-md border border-sky-200 bg-sky-50 p-3 text-sm leading-6 text-sky-900">
            Er zijn nog geen projecten ingegeven. Voeg ze toe in de Google Sheet via
            <em>Subsidietool → Project toevoegen</em>; elk project wordt een kolom waar de stad
-           per ${EENHEID.enkelvoud} het factuurbedrag intypt. Zolang er niets ingevuld is, staat de volledige
-           pot van elke ${EENHEID.enkelvoud} nog open.
+           per ${E.enkelvoud} het factuurbedrag intypt. Zolang er niets ingevuld is, staat de volledige
+           pot van elke ${E.enkelvoud} nog open.
          </p>`
       : '');
 
     const rijen = gesorteerd.map(school => {
-      const eigen = r.perSchool[school.sleutel];
+      const eigen = r.perGroep[school.sleutel];
       const besteed = school.projectenTotaal;
       const beschikbaar = eigen.basisaandeel - besteed;
 
@@ -642,15 +674,15 @@ const UI = (function () {
         </tr>`;
     }).join('');
 
-    const somPot = resultaat.scholen.reduce((t, s) => t + r.perSchool[s.sleutel].basisaandeel, 0);
-    const somBesteed = resultaat.scholen.reduce((t, s) => t + s.projectenTotaal, 0);
+    const somPot = r.groepen.reduce((t, s) => t + r.perGroep[s.sleutel].basisaandeel, 0);
+    const somBesteed = r.groepen.reduce((t, s) => t + s.projectenTotaal, 0);
 
     el('projecten-overzicht').innerHTML = `
       ${inleiding}
       <table class="min-w-full text-sm">
         <thead class="bg-slate-50 text-xs uppercase tracking-wider text-slate-500">
           <tr>
-            <th class="px-3 py-3 text-left font-medium">${EENHEID.kop}</th>
+            <th class="px-3 py-3 text-left font-medium">${E.kop}</th>
             <th class="px-3 py-3 text-right font-medium">Pot<div class="font-normal normal-case text-slate-400">aandeel luik ${r.luik.nummer}</div></th>
             <th class="px-2 py-3 text-right font-medium">Besteed<div class="font-normal normal-case text-slate-400">facturen</div></th>
             <th class="px-3 py-3 text-right font-medium">Nog beschikbaar</th>
@@ -661,12 +693,12 @@ const UI = (function () {
         <tbody class="divide-y divide-slate-200 bg-white">${rijen}</tbody>
         <tfoot class="bg-slate-100 font-semibold text-slate-800">
           <tr>
-            <td class="px-3 py-3">Totaal (${resultaat.scholen.length} ${EENHEID.meervoud})</td>
+            <td class="px-3 py-3">Totaal (${r.groepen.length} ${E.meervoud})</td>
             <td class="px-3 py-3 text-right whitespace-nowrap">${euro.format(somPot)}</td>
             <td class="px-3 py-3 text-right whitespace-nowrap">${euro.format(somBesteed)}</td>
             <td class="px-3 py-3 text-right whitespace-nowrap ${somPot - somBesteed < -0.005 ? 'text-amber-700' : 'text-emerald-700'}">${euro.format(somPot - somBesteed)}</td>
             ${projecten.map(p => {
-              const som = resultaat.scholen.reduce((t, s) => t + (s.projecten[p.id] || 0), 0);
+              const som = r.groepen.reduce((t, s) => t + (s.projecten[p.id] || 0), 0);
               return `<td class="px-3 py-3 text-right whitespace-nowrap">${euro.format(som)}</td>`;
             }).join('')}
             ${r.herverdeel ? `<td class="px-3 py-3 text-right whitespace-nowrap">${euro.format(r.budget - r.nietVerdeeld)}</td>` : ''}
@@ -695,13 +727,24 @@ const UI = (function () {
         waarde: euro.format(r.overdracht)
       });
     }
-    if (luik.metFacturen) {
-      stappen.push({ label: 'Aandeel in de pot', waarde: euro.format(eigen.basisaandeel) });
-      stappen.push({ label: 'Besteed aan projecten', waarde: euro.format(school.projectenTotaal) });
-      stappen.push({ label: 'Nog beschikbaar', waarde: euro.format(eigen.basisaandeel - school.projectenTotaal) });
+    // Per school verdeeld: de pot, de facturen en het plafond zijn die van de
+    // hele school, deze vestiging krijgt er haar deel van.
+    const groep = eigen.groep ? r.groepen.find(g => g.sleutel === eigen.groep) : school;
+    const vanGroep = eigen.groep ? r.perGroep[eigen.groep] : eigen;
+    const viaSchool = Boolean(eigen.groep);
+    if (viaSchool) {
+      stappen.push({ label: 'Bedrag voor de hele school', waarde: euro.format(vanGroep.bedrag) });
+      stappen.push({ label: `Deel deze vestiging (${luik.grondslagLabel})`,
+                     waarde: `${decimaal.format(eigen.grondslag)} van ${decimaal.format(vanGroep.grondslag)}` });
     }
-    if (eigen.plafond !== null) {
-      stappen.push({ label: 'Plafond (ingediende facturen)', waarde: euro.format(eigen.plafond) });
+    if (luik.metFacturen) {
+      const wie = viaSchool ? ' (hele school)' : '';
+      stappen.push({ label: `Aandeel in de pot${wie}`, waarde: euro.format(vanGroep.basisaandeel) });
+      stappen.push({ label: `Besteed aan projecten${wie}`, waarde: euro.format(groep.projectenTotaal) });
+      stappen.push({ label: `Nog beschikbaar${wie}`, waarde: euro.format(vanGroep.basisaandeel - groep.projectenTotaal) });
+    }
+    if (vanGroep.plafond !== null) {
+      stappen.push({ label: `Plafond (ingediende facturen${viaSchool ? ' van de school' : ''})`, waarde: euro.format(vanGroep.plafond) });
     }
     if (r.herverdeel && r.rondes.length > 1) {
       stappen.push({ label: 'Verdeelrondes', waarde: `${r.rondes.length} (herverdeling van onbenut budget)` });
@@ -713,17 +756,23 @@ const UI = (function () {
       school: deelnemerTitel(school),
       bedrag: eigen.bedrag,
       uitleg: luik.toelichting,
-      formule: `${euro.format(r.budget)} × ${decimaal.format(eigen.grondslag)} / ${decimaal.format(r.totaleGrondslag)} = ${euro.format(eigen.bedrag)}`,
+      formule: viaSchool
+        ? `${euro.format(vanGroep.bedrag)} × ${decimaal.format(eigen.grondslag)} / ${decimaal.format(vanGroep.grondslag)} = ${euro.format(eigen.bedrag)}`
+        : `${euro.format(r.budget)} × ${decimaal.format(eigen.grondslag)} / ${decimaal.format(r.totaleGrondslag)} = ${euro.format(eigen.bedrag)}`,
       stappen,
       voorwaarden: luik.voorwaarden || [],
-      opmerking: eigen.geplafonneerd ? `Deze ${EENHEID.enkelvoud} zit op haar plafond: het bedrag is begrensd door de ingediende facturen.` : ''
+      opmerking: [
+        viaSchool ? `Dit luik wordt per school verdeeld. De school krijgt ${euro.format(vanGroep.bedrag)}; elke vestiging krijgt daarvan een deel naar ${luik.grondslagLabel}.` : '',
+        eigen.geplafonneerd ? `De ${viaSchool ? 'school' : EENHEID.enkelvoud} zit op haar plafond: het bedrag is begrensd door de ingediende facturen.` : ''
+      ].filter(Boolean).join(' ')
     };
   }
 
-  /** Waar het bestede bedrag van één deelnemer vandaan komt: factuur per factuur. */
+  /** Waar het bestede bedrag van één school vandaan komt: factuur per factuur. */
   function maakProjectDetail(r, school) {
     const projecten = data.projecten || [];
-    const eigen = r.perSchool[school.sleutel];
+    const eigen = r.perGroep[school.sleutel];
+    const E = potEenheid(r.luik);
     const besteed = school.projectenTotaal;
     const gebruikt = projecten.filter(p => (school.projecten[p.id] || 0) !== 0);
 
@@ -741,15 +790,15 @@ const UI = (function () {
       school: deelnemerTitel(school),
       bedrag: besteed,
       uitleg: gebruikt.length === 0
-        ? `Voor deze ${EENHEID.enkelvoud} zijn er nog geen projectfacturen ingegeven. De volledige pot van ${euro.format(eigen.basisaandeel)} staat dus nog open.`
-        : `De facturen die de stad voor deze ${EENHEID.enkelvoud} noteerde. Samen ${euro.format(besteed)} van een pot van ${euro.format(eigen.basisaandeel)}.`,
+        ? `Voor deze ${E.enkelvoud} zijn er nog geen projectfacturen ingegeven. De volledige pot van ${euro.format(eigen.basisaandeel)} staat dus nog open.`
+        : `De facturen die de stad voor deze ${E.enkelvoud} noteerde. Samen ${euro.format(besteed)} van een pot van ${euro.format(eigen.basisaandeel)}.`,
       formule: gebruikt.length === 0
         ? `${euro.format(eigen.basisaandeel)} pot - ${euro.format(0)} besteed = ${euro.format(eigen.basisaandeel)} beschikbaar`
         : `${gebruikt.map(p => euro.format(school.projecten[p.id])).join(' + ')} = ${euro.format(besteed)}`,
       stappen,
       voorwaarden: r.luik.voorwaarden || [],
       opmerking: beschikbaar < -0.005
-        ? `Deze ${EENHEID.enkelvoud} besteedde ${euro.format(-beschikbaar)} meer dan haar eigen pot. Bij de eindafrekening kan dat opgevangen worden met wat andere ${EENHEID.meervoud} niet gebruikten.`
+        ? `Deze ${E.enkelvoud} besteedde ${euro.format(-beschikbaar)} meer dan haar eigen pot. Bij de eindafrekening kan dat opgevangen worden met wat andere ${E.meervoud} niet gebruikten.`
         : ''
     };
   }
@@ -815,7 +864,7 @@ const UI = (function () {
       { label: 'Verdeeld', waarde: euro.format(r.budget - r.nietVerdeeld) },
       { label: 'Niet verdeeld', waarde: euro.format(r.nietVerdeeld) },
       { label: 'Totale grondslag', waarde: `${decimaal.format(r.totaleGrondslag)} ${r.luik.grondslagEenheid || ''}`.trim() },
-      { label: `Aantal ${EENHEID.meervoud}`, waarde: aantal.format(resultaat.scholen.length) }
+      { label: `Aantal ${potEenheid(r.luik).meervoud}`, waarde: aantal.format(r.groepen.length) }
     ];
     if (r.overdracht) {
       const bron = LUIKEN.find(l => l.overdrachtNaar === r.luik.id);
@@ -824,7 +873,7 @@ const UI = (function () {
         { label: bron ? `Uit luik ${bron.nummer} (${bron.naam})` : 'Overgedragen', waarde: euro.format(r.overdracht) });
     }
     r.rondes.forEach(ronde => stappen.push({
-      label: `Ronde ${ronde.ronde} (${ronde.aantalDeelnemers} ${EENHEID.meervoud})`,
+      label: `Ronde ${ronde.ronde} (${ronde.aantalDeelnemers} ${potEenheid(r.luik).meervoud})`,
       waarde: `${euro.format(ronde.uitgedeeld)} uitgedeeld`
     }));
 
@@ -969,9 +1018,11 @@ const UI = (function () {
         return;
       }
       if (doel.classList.contains('bron-invoer')) {
-        const vestiging = data.vestigingen[Number(doel.dataset.index)];
         const waarde = doel.value === '' ? null : Number(doel.value);
-        vestiging[doel.dataset.soort][doel.dataset.sleutel] = waarde;
+        const doelwit = doel.dataset.soort === 'projectbedragen'
+          ? data.projectbedragen[doel.dataset.index]
+          : data.vestigingen[Number(doel.dataset.index)][doel.dataset.soort];
+        doelwit[doel.dataset.sleutel] = waarde;
         herberekenStraks(tekenInfrastructuur);
       }
     });

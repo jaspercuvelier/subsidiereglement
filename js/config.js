@@ -18,8 +18,9 @@
 /* 0. VERDEELEENHEID: wie krijgt een eigen bedrag                      */
 /* ------------------------------------------------------------------ */
 /**
- * 'vestiging'  elke vestiging is een eigen deelnemer: een eigen bedrag per
- *              luik en een eigen projectenpot (afspraak werkgroep).
+ * 'vestiging'  elke vestiging is een eigen deelnemer met een eigen bedrag per
+ *              luik (afspraak werkgroep). Een luik met `eenheid: 'school'`
+ *              (de projecten) wordt toch per instellingsnummer verdeeld.
  * 'school'     vestigingen met hetzelfde instellingsnummer worden samengeteld
  *              tot één bedrag.
  */
@@ -93,6 +94,11 @@ const INSTELLINGEN = [
  *      Het luik heeft de afstanden- en bezoekenmatrix nodig.
  * plafond(school, ctx) -> getal | null
  * herverdeel(ctx) -> boolean
+ * eenheid: 'school'
+ *      Verdeel dit luik per instellingsnummer, ook als VERDEELEENHEID op
+ *      'vestiging' staat. Pot, plafond en herverdeling gelden dan voor de
+ *      school; elke vestiging krijgt van het schoolbedrag een deel naar rato
+ *      van haar eigen grondslag.
  * afgeleiden: [{ label, formaat, bereken(resultaat, school, ctx) }]
  *      Extra kengetallen in het detailpaneel, bv. bedrag per leerling.
  *
@@ -107,8 +113,8 @@ const INSTELLINGEN = [
  *      vergroot die pot, een tekort verkleint ze.
  *
  * metFacturen: true
- *      De bestedingen van dit luik worden per school en per project met
- *      facturen bijgehouden (de projectenmatrix). De tool toont dan per school
+ *      De bestedingen van dit luik worden per school (instellingsnummer) en
+ *      per project met facturen bijgehouden (de projectenmatrix). De tool toont dan per school
  *      wat de pot is, wat besteed werd en wat nog beschikbaar is.
  */
 const LUIKEN = [
@@ -144,6 +150,10 @@ const LUIKEN = [
     grondslagEenheid: 'lln',
     vereist: ['lln'],
     grondslag: (v) => getalOfNul(v.gegevens.lln),
+    // De facturen gaan naar de school, en een project loopt meestal over alle
+    // vestigingen heen. Per vestiging zou een vestiging die minder uitgeeft
+    // haar overschot aan alle scholen afstaan in plaats van aan haar zustervestiging.
+    eenheid: 'school',
     metFacturen: true,
     plafond: (school, ctx) => (ctx.instellingen.herverdeelProjecten ? school.projectenTotaal : null),
     herverdeel: (ctx) => ctx.instellingen.herverdeelProjecten === true,
@@ -154,12 +164,12 @@ const LUIKEN = [
       }
     ],
     voorwaarden: [
-      'Elke vestiging heeft een eigen pot naar rato van haar leerlingenaantal.',
-      'De facturen worden per vestiging en per project bijgehouden in het tabblad PROJECTEN, zodat elke vestiging ziet waaraan haar pot opging en hoeveel er nog over is.',
+      'Elke school (instellingsnummer) heeft één pot naar rato van het leerlingenaantal van al haar vestigingen samen.',
+      'De facturen worden per school en per project bijgehouden in het tabblad PROJECTBEDRAGEN, zodat elke school ziet waaraan haar pot opging en hoeveel er nog over is. Een project voor meerdere vestigingen hoeft niet opgesplitst te worden.',
       'Projecten hoeven niet vooraf ter bespreking voorgelegd te worden.',
-      'Wat een vestiging niet gebruikt, kan herverdeeld worden over de vestigingen die hun eigen pot wél opgebruikten.'
+      'Wat een school niet gebruikt, kan herverdeeld worden over de scholen die hun eigen pot wél opgebruikten.'
     ],
-    toelichting: 'Elke vestiging krijgt een aandeel van de pot naar rato van haar leerlingenaantal. De pot is de €15.000 plus of min het saldo van luik 1. De stad noteert per vestiging de afzonderlijke projectfacturen; het verschil tussen de pot en het bestede bedrag is wat de vestiging nog beschikbaar heeft. Bij de eindafrekening kan wat onbenut bleef herverdeeld worden.'
+    toelichting: 'Elke school krijgt een aandeel van de pot naar rato van haar leerlingenaantal. De pot is de €15.000 plus of min het saldo van luik 1. De stad noteert per school de afzonderlijke projectfacturen; het verschil tussen de pot en het bestede bedrag is wat de school nog beschikbaar heeft. Bij de eindafrekening kan wat onbenut bleef herverdeeld worden. Heeft een school meerdere vestigingen, dan staat in de tabel per vestiging haar deel van het schoolbedrag, naar leerlingenaantal.'
   },
 
   {
